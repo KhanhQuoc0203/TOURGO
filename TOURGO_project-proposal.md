@@ -11,7 +11,7 @@
 
 ### Git
 
-Git repository: [<link>](https://github.com/KhanhQuoc0203/TOURGO/edit/main/fullname_project-proposal.md)
+Git repository: https://github.com/KhanhQuoc0203/TOURGO/edit/main/fullname_project-proposal.md
 
 ## MÔ TẢ DỰ ÁN
 
