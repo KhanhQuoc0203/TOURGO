@@ -264,9 +264,57 @@ C. Đối với Admin (Administrator Workflow)
 
 ### MVP
 
-- Mô tả các chức năng mà sản phẩm MVP của bạn sẽ thực hiện (thời hạn hoàn thành MVP 12.04.2026)
-- Viết kế hoạch kiểm thử
-- Liệt kê những chức năng dự trù sẽ thực hiện ở phase kế tiếp
+1. Mô tả các chức năng MVP (Thời hạn hoàn thành: 12.04.2026)
+
+Ở giai đoạn MVP, hệ thống sẽ tập trung hoàn thiện luồng nghiệp vụ quan trọng nhất: kết nối người tạo tour và người đặt tour thông qua một quy trình kiểm duyệt an toàn.
+
+Xác thực & Phân quyền (Auth & RBAC): * Hệ thống đăng ký, đăng nhập phân tách rõ ràng 3 vai trò: Người đặt, Người tạo và Admin.
+
+Sử dụng JWT Middleware để bảo vệ các tài nguyên (endpoints) riêng tư.
+
+Admin có quyền kích hoạt hoặc tạm khóa tài khoản của Người tạo tour để đảm bảo uy tín.
+
+Quản lý Tour & Bộ lọc từ khóa (Content Moderation): * Người tạo có thể thực hiện đầy đủ các thao tác CRUD (Thêm, sửa, xóa) đối với tour.
+
+Automated Filtering: Tích hợp bộ lọc từ khóa cấm (Blacklist) tự động từ chối các tour chứa nội dung không phù hợp ngay khi nhấn "Tạo".
+
+Trạng thái Tour: Chờ duyệt (Pending) -> Đã duyệt (Active) -> Đã đóng (Closed).
+
+Công cụ tìm kiếm & Smart Selection: * API tìm kiếm tour theo địa điểm, giá cả và thời gian.
+
+Hiển thị danh sách các tour "Sạch" đã qua kiểm duyệt lớp 1 (tự động) và lớp 2 (Admin).
+
+Luồng Đặt Tour đầy đủ (Booking Workflow): * Người đặt chọn số lượng thành viên → Hệ thống tự động validate (kiểm tra) max_participants.
+
+Trạng thái đơn hàng: Đang xử lý (Processing) → Đã xác nhận (Confirmed) → Đã hoàn thành (Completed).
+
+Người tạo tour quản lý danh sách khách hàng tham gia theo thời gian thực.
+
+Hệ thống Dashboard Admin: * Admin duyệt tour thủ công (Lớp cuối).
+
+Quản lý danh sách người dùng và thống kê số lượng giao dịch, doanh thu cơ bản theo tháng.
+
+Thông báo & Email tự động: * Gửi Email xác nhận tự động khi: Đặt tour thành công, Admin phê duyệt tour của người tạo, hoặc khi tour bị hủy.
+
+Tài liệu API Docs: * Tích hợp Swagger UI hoặc Postman Documentation hoàn chỉnh cho tất cả các endpoint (mô tả rõ Request Body, Response Schema và các mã lỗi thường gặp).
+
+2. Kế hoạch kiểm thử (Test Plan)
+
+Unit Test: Kiểm tra logic tính toán tiền tour, logic kiểm tra slot trống và hàm lọc từ khóa cấm.
+
+Integration Test: Kiểm tra luồng từ lúc Người tạo đăng bài -> Admin duyệt -> Người đặt tìm thấy và đặt tour thành công.
+
+Security Test: Kiểm tra xem Người đặt tour có thể truy cập vào Dashboard của Admin/Người tạo hay không (Phòng chống tấn công IDOR).
+
+3. Chức năng dự trù cho Phase kế tiếp (Sau 12.04.2026)
+
+Thanh toán Online: Tích hợp cổng thanh toán VNPay/Stripe.
+
+Hệ thống Đánh giá (Review): Người dùng đánh giá và chấm điểm sao sau khi hoàn thành chuyến đi.
+
+Bản đồ du lịch: Hiển thị tọa độ địa điểm tour trên Google Maps API.
+
+Chat trực tuyến: Kết nối trực tiếp giữa Người đặt và Người tạo tour.
 
 ### Beta Version
 - Kết quả kiểm thử
