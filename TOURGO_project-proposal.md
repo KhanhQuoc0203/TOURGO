@@ -6,7 +6,7 @@
 
 - Thành viên 1: Khuất Quốc Khánh _ 23711381
 - Thành viên 2: Nguyễn Vũ Hà
-- Thành viên 3: Nguyễn Tấn Khang
+- Thành viên 3: Nguyễn Tấn Khang _ 23722301
 - Thành viên 4: Nguyễn Huỳnh Nhật Tân _ 23650801
 
 ### Git
