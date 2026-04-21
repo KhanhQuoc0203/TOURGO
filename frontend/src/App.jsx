@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import Home from './pages/client/Home';
@@ -10,6 +9,7 @@ import Header from './components/common/Header/Header';
 import TourDetail from './pages/client/TourDetail/TourDetail';
 import Profile from './pages/client/Profile';
 import SearchResult from './pages/client/SearchResult/SearchResult';
+import ToursPage from './components/tour/ToursPage';
 
 
 
@@ -26,6 +26,10 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/introduce" element={<Introduce />} />
+        
+        {/* --- THÊM ROUTE NÀY --- */}
+        <Route path="/tours" element={<ToursPage />} /> 
+
         <Route path="/tours/:id" element={<TourDetail />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/search" element={<SearchResult />} />

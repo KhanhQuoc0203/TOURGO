@@ -1,47 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axiosClient from '../../../api/axiosClient';
-import Navbar from '../../../components/layout/Navbar';
-import SidebarFilter from '../../../components/layout/SidebarFilter'; // Thêm 1: Import component của Hà
+import SidebarFilter from '../../../components/layout/SidebarFilter';
 import './SearchResult.css';
 
 export default function SearchResult() {
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q');
     const [results, setResults] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
-    // 1. State bộ lọc Khang đã thêm (Giữ nguyên)
     const [filters, setFilters] = useState({
         min_price: '',
         max_price: '',
         departure_date: ''
     });
 
-    // 2. Cập nhật useEffect: Giữ nguyên logic nhưng thêm filters vào dependency
     useEffect(() => {
         const fetchSearchResults = async () => {
+            // Chỉ chạy khi có từ khóa tìm kiếm
+            if (!query || query.trim() === "") {
+                setResults([]);
+                return;
+            }
+
             setLoading(true);
             try {
-                // Khang dùng endpoint /filter/ để Backend xử lý lọc nhé
                 const response = await axiosClient.get(`/tours/filter/`, {
                     params: {
                         search: query,
-                        ...filters // Thêm 2: Gửi kèm các giá trị lọc từ Hà
+                        ...filters
                     }
                 });
-                setResults(response.data);
+
+                // Kiểm tra nếu data là mảng thì set, không thì tìm trong results
+                const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+                setResults(data);
+                
+                console.log("Data thực tế từ Backend:", data);
             } catch (error) {
-                console.error("Lỗi tìm kiếm:", error);
+                console.error("Lỗi API:", error);
+                setResults([]);
             } finally {
                 setLoading(false);
             }
         };
-        // Gọi hàm mỗi khi query hoặc filters thay đổi
-        fetchSearchResults(); 
-    }, [query, filters]); 
 
-    // 3. Hàm xử lý khi Hà thay đổi bộ lọc (Dùng để "nối dây")
+        fetchSearchResults();
+    }, [query, filters]);
+
     const handleFilterUpdate = (newFields) => {
         setFilters(prev => ({ ...prev, ...newFields }));
     };
@@ -50,49 +57,42 @@ export default function SearchResult() {
         <div className="search-result-page">
             <div className="search-container">
                 <header className="search-header">
-                    <h2>Kết quả tìm kiếm cho: "<span>{query}</span>"</h2>
-                    <p className="result-count">Tìm thấy <strong>{results.length}</strong> tour phù hợp</p>
+                    <h2>Kết quả cho: "<span>{query}</span>"</h2>
+                    <p>Tìm thấy <strong>{results.length}</strong> tour</p>
                 </header>
 
-                {/* 4. Chia Layout: Sidebar bên trái, Nội dung bên phải */}
-                <div className="search-main-layout" style={{ display: 'flex', gap: '30px', marginTop: '20px' }}>
-                    
-                    {/* Thêm 3: Cắm Sidebar của Hà vào đây */}
-                    <aside className="search-sidebar" style={{ width: '280px', flexShrink: 0 }}>
+                <div className="search-main-layout" style={{ display: 'flex', gap: '20px' }}>
+                    <aside style={{ width: '280px', flexShrink: 0 }}>
                         <SidebarFilter onFilterChange={handleFilterUpdate} />
                     </aside>
 
                     <div className="search-content" style={{ flexGrow: 1 }}>
                         {loading ? (
-                            <div className="loading-state">
-                                <div className="spinner"></div>
-                                <p>Đang tìm kiếm tour tốt nhất cho bạn...</p>
-                            </div>
+                            <p>Đang tải...</p>
                         ) : (
                             <div className="search-results-grid">
                                 {results.length > 0 ? (
                                     results.map((tour) => (
                                         <div key={tour.id} className="search-tour-card">
                                             <div className="card-image">
-                                                <img src={tour.image || 'default-image.jpg'} alt={tour.title} />
+                                                {/* Dùng ảnh từ Backend hoặc ảnh mẫu nếu trống */}
+                                                <img src={tour.image || 'https://via.placeholder.com/300x200?text=No+Image'} alt={tour.title} />
                                             </div>
                                             <div className="card-content">
-                                                <h3>{tour.title}</h3>
-                                                <p className="location">{tour.address}</p>
-                                                <p className="description">{tour.description?.substring(0, 100)}...</p>
+                                                {/* Sửa title thành tour.title (Backend trả về "1") */}
+                                                <h3>Tour số: {tour.title}</h3>
+                                                <p><b>Địa điểm:</b> {tour.address}</p>
+                                                <p><b>Người tạo:</b> {tour.creator_name}</p>
+                                                
                                                 <div className="card-footer">
-                                                    <span className="price">{Number(tour.price).toLocaleString()} VNĐ</span>
-                                                    <Link to={`/tours/${tour.id}`} className="btn-view">Xem chi tiết</Link>
+                                                    <span className="price">{Number(tour.price || 0).toLocaleString()} VNĐ</span>
+                                                    <Link to={`/tours/${tour.id}`} className="btn-view">Chi tiết</Link>
                                                 </div>
                                             </div>
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="no-results">
-                                        <div className="no-results-icon"></div>
-                                        <h3>Rất tiếc, không tìm thấy tour nào!</h3>
-                                        <p>Hãy thử thay đổi bộ lọc hoặc tìm kiếm với từ khóa khác.</p>
-                                    </div>
+                                    <p>      Không tìm thấy tour nào       </p>
                                 )}
                             </div>
                         )}
