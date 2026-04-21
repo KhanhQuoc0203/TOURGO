@@ -90,6 +90,7 @@ DATABASES = {
         'PORT': '',  # Thường để trống cho bản Express hoặc đổi theo cấu hình thực tế
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
+            'extra_params': 'TrustServerCertificate=yes',
         },
     }
 }
