@@ -53,6 +53,12 @@ export default function SearchResult() {
         setFilters(prev => ({ ...prev, ...newFields }));
     };
 
+    const formatImageUrl = (url) => {
+        if (!url) return 'https://via.placeholder.com/300x200?text=No+Image';
+        if (url.startsWith('http')) return url;
+        return `http://127.0.0.1:8000${url}`;
+    };
+
     return (
         <div className="search-result-page">
             <div className="search-container">
@@ -72,27 +78,32 @@ export default function SearchResult() {
                         ) : (
                             <div className="search-results-grid">
                                 {results.length > 0 ? (
-                                    results.map((tour) => (
-                                        <div key={tour.id} className="search-tour-card">
-                                            <div className="card-image">
-                                                {/* Dùng ảnh từ Backend hoặc ảnh mẫu nếu trống */}
-                                                <img src={tour.image || 'https://via.placeholder.com/300x200?text=No+Image'} alt={tour.title} />
-                                            </div>
-                                            <div className="card-content">
-                                                {/* Sửa title thành tour.title (Backend trả về "1") */}
-                                                <h3>Tour số: {tour.title}</h3>
-                                                <p><b>Địa điểm:</b> {tour.address}</p>
-                                                <p><b>Người tạo:</b> {tour.creator_name}</p>
-                                                
-                                                <div className="card-footer">
-                                                    <span className="price">{Number(tour.price || 0).toLocaleString()} VNĐ</span>
-                                                    <Link to={`/tours/${tour.id}`} className="btn-view">Chi tiết</Link>
+                                    results.map((tour) => {
+                                        // Lấy ảnh: ưu tiên ảnh đầu tiên trong tour_images, sau đó là image_url
+                                        const mainImg = (tour.tour_images && tour.tour_images.length > 0)
+                                            ? tour.tour_images[0].image
+                                            : tour.image_url;
+
+                                        return (
+                                            <div key={tour.id} className="search-tour-card">
+                                                <div className="card-image">
+                                                    <img src={formatImageUrl(mainImg)} alt={tour.title} />
+                                                </div>
+                                                <div className="card-content">
+                                                    <h3>Tour: {tour.title}</h3>
+                                                    <p><b>Địa điểm:</b> {tour.address}</p>
+                                                    <p><b>Người tạo:</b> {tour.creator_name}</p>
+                                                    
+                                                    <div className="card-footer">
+                                                        <span className="price">{Number(tour.price || 0).toLocaleString()} VNĐ</span>
+                                                        <Link to={`/tours/${tour.id}`} className="btn-view">Chi tiết</Link>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
-                                    <p>      Không tìm thấy tour nào       </p>
+                                    <p>Không tìm thấy tour nào</p>
                                 )}
                             </div>
                         )}

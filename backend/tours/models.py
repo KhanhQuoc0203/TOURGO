@@ -25,3 +25,11 @@ class Tour(models.Model):
     class Meta:
         verbose_name = "Chuyến du lịch"
         verbose_name_plural = "Các chuyến du lịch"
+
+class TourImage(models.Model):
+    tour = models.ForeignKey(Tour, related_name='tour_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='tour_images/', verbose_name="Ảnh")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image for {self.tour.title}"

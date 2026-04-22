@@ -7,7 +7,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import PasswordResetOTP, User
 from django.core.mail import send_mail
+import logging
 import random
+
+logger = logging.getLogger('app_logger')
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -28,6 +31,7 @@ class LoginView(APIView):
         
         if user is not None:
             refresh = RefreshToken.for_user(user)
+            logger.info(f"Người dùng {username} đã đăng nhập thành công.")
             return Response({
                 "message": "Đăng nhập thành công!",
                 "access_token": str(refresh.access_token),
@@ -36,8 +40,8 @@ class LoginView(APIView):
                 "role": user.role
             }, status=status.HTTP_200_OK)
             
+        logger.warning(f"Thử đăng nhập thất bại cho tài khoản: {username}")
         return Response({"error": "Sai tài khoản hoặc mật khẩu"}, status=status.HTTP_400_BAD_REQUEST)
-# --- Phần code mới của Khánh ---
 
 class ForgotPasswordView(APIView):
     """
