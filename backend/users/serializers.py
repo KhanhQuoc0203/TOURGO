@@ -4,6 +4,17 @@ import re
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    username = serializers.CharField(
+        error_messages={
+            'unique': 'Tên đăng nhập này đã tồn tại. Vui lòng chọn tên khác.'
+        }
+    )
+    phone = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True,
+        error_messages={
+            'unique': 'Số điện thoại này đã được đăng ký. Vui lòng dùng số khác.'
+        }
+    )
 
     class Meta:
         model = User
@@ -15,6 +26,24 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Mật khẩu phải có ít nhất 8 ký tự.")
         if not re.search(r"[A-Za-z]", value) or not re.search(r"[0-9]", value):
             raise serializers.ValidationError("Mật khẩu phải bao gồm cả chữ và số.")
+        return value
+
+    def validate_username(self, value):
+        # Kiểm tra tên đăng nhập đã tồn tại chưa
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Tên đăng nhập này đã được đăng ký. Vui lòng chọn tên khác.")
+        return value
+
+    def validate_email(self, value):
+        # Kiểm tra email đã tồn tại trong hệ thống chưa
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email này đã được đăng ký. Vui lòng dùng email khác.")
+        return value
+
+    def validate_phone(self, value):
+        # Kiểm tra số điện thoại đã tồn tại trong hệ thống chưa
+        if value and User.objects.filter(phone=value).exists():
+            raise serializers.ValidationError("Số điện thoại này đã được đăng ký. Vui lòng dùng số khác.")
         return value
 
     def create(self, validated_data):
