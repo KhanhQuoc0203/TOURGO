@@ -23,8 +23,10 @@ export default function Login() {
     try {
       const response = await axiosClient.post('users/login/', loginData);
 
+      console.log(response.data);
       // Lưu token và thông tin user mới
       localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('refresh_token', response.data.refresh_token);
       localStorage.setItem('username', response.data.username);
       localStorage.setItem('role', response.data.role);
 

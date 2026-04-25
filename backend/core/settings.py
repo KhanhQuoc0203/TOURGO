@@ -151,10 +151,20 @@ REST_FRAMEWORK = {
     )
 }
 
+
+
+
 from datetime import timedelta
+
+# SIMPLE_JWT = {
+#     'ACCESS_TOKEN_LIFETIME': timedelta(seconds=15),
+#     'REFRESH_TOKEN_LIFETIME': timedelta(seconds=20),
+#     'AUTH_HEADER_TYPES': ('Bearer',),
+# }
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
@@ -217,3 +227,5 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'nguyenvuhaaa123@gmail.com'
 EMAIL_HOST_PASSWORD = 'xmek qfzc aimn pvak'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

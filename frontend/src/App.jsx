@@ -5,7 +5,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import Introduce from "./pages/client/Introduce";
-import Header from './components/common/Header/Header'; 
+import Header from './components/common/Header/Header';
 import TourDetail from './pages/client/TourDetail/TourDetail';
 import Profile from './pages/client/Profile';
 import SearchResult from './pages/client/SearchResult/SearchResult';
@@ -26,9 +26,9 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/introduce" element={<Introduce />} />
-        
+
         {/* --- THÊM ROUTE NÀY --- */}
-        <Route path="/tours" element={<ToursPage />} /> 
+        <Route path="/tours" element={<ToursPage />} />
 
         <Route path="/tours/:id" element={<TourDetail />} />
         <Route path="/profile" element={<Profile />} />
