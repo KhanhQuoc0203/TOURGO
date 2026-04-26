@@ -11,6 +11,12 @@ export const getTourById = async(id) => {
     const response = await axiosClient.get(`tours/${id}/`);
     return response.data;
 };
+// gọi API xử lí thông báo người dùng (Hà làm)
+export const createBooking = async(data) => {
+    // Phải gửi kèm Token trong Header để Tân xác thực
+    const response = await axiosClient.post('/bookings/', data);
+    return response.data;
+};
 
 // Upload nhiều ảnh cho tour (Nhiệm vụ Khang)
 export const uploadTourImages = async(tourId, files) => {

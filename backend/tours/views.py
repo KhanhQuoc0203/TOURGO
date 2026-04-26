@@ -3,9 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
 from .models import Tour, TourImage
-from .serializers import TourSerializer, TourImageSerializer
+from .serializers import BookingSerializer, TourSerializer, TourImageSerializer
 from .permissions import IsAdminOrProvider
 import logging
+from rest_framework import permissions
 
 logger = logging.getLogger('app_logger')
 
@@ -142,3 +143,17 @@ class LocationListView(APIView):
             {"id": 6, "name": "Phú Quốc", "lat": 10.2899, "lng": 103.9840},
         ]
         return Response(provinces)
+    
+    
+class BookingCreateView(generics.CreateAPIView):
+    serializer_class = BookingSerializer
+    permission_classes = [permissions.IsAuthenticated] # Bắt buộc đăng nhập
+
+    def perform_create(self, serializer):
+        tour = serializer.validated_data['tour']
+        num_people = serializer.validated_data['number_of_people']
+        # Tự động tính tổng tiền từ giá tour và số người
+        total = tour.price * num_people
+        serializer.save(user=self.request.user, total_price=total)
+    
+    
