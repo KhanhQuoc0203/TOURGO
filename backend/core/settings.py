@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,10 +41,11 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'cloudinary_storage',
+    'cloudinary',
     'users',
     'tours',
     'bookings',
-    
 ]
 
 MIDDLEWARE = [
@@ -156,12 +158,62 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+# --- Configuration for Cloudinary (Khang) ---
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dgltxvqx2',
+    'API_KEY': '368242959374932',
+    'API_SECRET': 'JJHGEi4OyA-9w7TxMt70lu_Oz78'
+}
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# --- Configuration for Logging (Tân) ---
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'debug.log'),
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'app_logger': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
 # --- Email Settings for Gmail ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'nguyenvuhaaa123@gmail.com'  # Thay bằng email của bạn 
-EMAIL_HOST_PASSWORD = 'xmek qfzc aimn pvak' # Thay bằng mật khẩu ứng dụng Gmail của bạn
+EMAIL_HOST_USER = 'nguyenvuhaaa123@gmail.com'
+EMAIL_HOST_PASSWORD = 'xmek qfzc aimn pvak'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-

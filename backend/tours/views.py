@@ -1,10 +1,13 @@
-from rest_framework import generics, filters, permissions
+from rest_framework import generics, filters, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
-from .models import Tour
-from .serializers import TourSerializer
+from .models import Tour, TourImage
+from .serializers import TourSerializer, TourImageSerializer
 from .permissions import IsAdminOrProvider
+import logging
+
+logger = logging.getLogger('app_logger')
 
 # CHỈ DÙNG MỘT CLASS NÀY CHO CẢ XEM DANH SÁCH VÀ TẠO TOUR
 class TourCreateView(generics.ListCreateAPIView):
@@ -66,7 +69,7 @@ class TourFilterView(APIView):
         if max_p: tours = tours.filter(price__lte=max_p)
         if d_date: tours = tours.filter(departure_date=d_date)
 
-        serializer = TourSerializer(tours, many=True)
+        serializer = TourSerializer(tours, many=True, context={'request': request})
         return Response(serializer.data)
 
 # GIỮ NGUYÊN CHI TIẾT VÀ BOOKING
@@ -77,11 +80,49 @@ class TourDetailAPIView(APIView):
     def get(self, request, pk):
         try:
             tour = Tour.objects.get(pk=pk)
-            return Response(TourSerializer(tour).data)
+            return Response(TourSerializer(tour, context={'request': request}).data)
         except Tour.DoesNotExist:
             return Response({"error": "Không tìm thấy!"}, status=404)
 
 class BookingView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     def post(self, request):
-        return Response({"message": "Đặt tour thành công!"})
+        tour_id = request.data.get('tour_id')
+        try:
+            tour = Tour.objects.get(id=tour_id)
+            if tour.slots <= 0:
+                logger.error(f"Đặt tour lỗi: Tour '{tour.title}' đã hết chỗ.")
+                return Response({"error": "Tour đã hết chỗ!"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Giả lập đặt tour thành công
+            return Response({"message": "Đặt tour thành công!"}, status=status.HTTP_201_CREATED)
+        except Tour.DoesNotExist:
+            logger.error(f"Đặt tour lỗi: Không tìm thấy Tour ID {tour_id}")
+            return Response({"error": "Không tìm thấy tour!"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.exception("Lỗi hệ thống khi đặt tour")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class TourImageUploadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+
+    def post(self, request, tour_id):
+        try:
+            tour = Tour.objects.get(id=tour_id)
+            # Cho phép người tạo hoặc admin upload
+            if tour.creator != request.user and not request.user.is_staff:
+                return Response({"error": "Bạn không có quyền upload ảnh cho tour này"}, status=status.HTTP_403_FORBIDDEN)
+            
+            files = request.FILES.getlist('images')
+            uploaded_images = []
+            for f in files:
+                img = TourImage.objects.create(tour=tour, image=f)
+                uploaded_images.append(TourImageSerializer(img).data)
+            
+            return Response({
+                "message": f"Đã upload thành công {len(uploaded_images)} ảnh.",
+                "images": uploaded_images
+            }, status=status.HTTP_201_CREATED)
+        except Tour.DoesNotExist:
+            return Response({"error": "Không tìm thấy tour!"}, status=status.HTTP_404_NOT_FOUND)

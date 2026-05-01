@@ -57,12 +57,25 @@ export default function Register() {
     } catch (error) {
       console.error("Lỗi đăng ký:", error.response?.data);
 
-      const backendMsg =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Đăng ký thất bại!";
+      const data = error.response?.data;
+      
+      if (data) {
+        // Backend DRF trả lỗi dạng {"email": ["..."], "phone": ["..."], "password": ["..."]}
+        // Tổng hợp tất cả lỗi lại thành 1 chuỗi để hiển thị
+        const messages = [];
 
-      setErrorMsg(backendMsg);
+        if (data.email) messages.push(`Email: ${data.email[0]}`);
+        if (data.phone) messages.push(`Số điện thoại: ${data.phone[0]}`);
+        if (data.password) messages.push(`Mật khẩu: ${data.password[0]}`);
+        if (data.username) messages.push(`Tên đăng nhập: ${data.username[0]}`);
+        if (data.message) messages.push(data.message);
+        if (data.error) messages.push(data.error);
+
+        setErrorMsg(messages.length > 0 ? messages.join(' | ') : "Đăng ký thất bại!");
+      } else {
+        setErrorMsg("Đăng ký thất bại! Vui lòng thử lại.");
+      }
+      
       setSuccessMsg('');
     }
   };
