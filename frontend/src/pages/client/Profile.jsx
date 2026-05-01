@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+// import axiosClient from '../../api/axiosClient';
 import './Profile.css';
+import api from '../../api/axios.js'
 
 export default function Profile() {
     const [user, setUser] = useState(null);
@@ -9,7 +10,7 @@ export default function Profile() {
     useEffect(() => {
         const fetchMe = async () => {
             try {
-                const response = await axiosClient.get('me/');
+                const response = await api.get('me/');
                 setUser(response.data);
             } catch (error) {
                 console.error("Lỗi lấy thông tin cá nhân:", error);
@@ -18,6 +19,11 @@ export default function Profile() {
             }
         };
         fetchMe();
+         const interval = setInterval(() => {
+        api.get('me/'); // trigger refresh nếu cần
+    }, 20000); // mỗi 20s
+
+    return () => clearInterval(interval);
     }, []);
 
     const handleLogout = () => {

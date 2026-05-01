@@ -14,8 +14,24 @@ import 'swiper/css/pagination';
 import './TourDetail.css';
 import ImageUploadModal from '../../../components/tour/ImageUploadModal';
 
+
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
 export default function TourDetail() {
-    const { id } = useParams(); 
+    const { id } = useParams();
     const [tour, setTour] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
@@ -55,8 +71,8 @@ export default function TourDetail() {
     };
 
     const isOwner = currentUser && tour && (
-        currentUser.id === tour.creator || 
-        currentUser.is_staff || 
+        currentUser.id === tour.creator ||
+        currentUser.is_staff ||
         currentUser.role === 'ADMIN'
     );
 
@@ -71,7 +87,7 @@ export default function TourDetail() {
     };
 
     // Chuẩn bị danh sách ảnh cho Carousel
-    const displayImages = (tour.tour_images && tour.tour_images.length > 0 
+    const displayImages = (tour.tour_images && tour.tour_images.length > 0
         ? tour.tour_images.map(img => img.image)
         : [tour.image_url]).map(img => formatImageUrl(img));
 
@@ -133,6 +149,29 @@ export default function TourDetail() {
                                 {tour.schedule || "Lịch trình đang được cập nhật..."}
                             </div>
                         </section>
+                        {/* === THÊM BẢN ĐỒ VÀO ĐÂY === */}
+                        <section className="tour-map-section">
+                            <h3>Vị trí điểm đến</h3>
+                            {(tour.latitude && tour.longitude) ? (
+                                <MapContainer
+                                    center={[tour.latitude, tour.longitude]}
+                                    zoom={13}
+                                    scrollWheelZoom={false}
+                                    style={{ height: '400px', width: '100%', borderRadius: '12px', zIndex: 1 }}
+                                >
+                                    <TileLayer
+                                        attribution='&copy; <a href="<https://www.openstreetmap.org/copyright>">OpenStreetMap</a>'
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    />
+                                    <Marker position={[tour.latitude, tour.longitude]}>
+                                        <Popup>{tour.address}</Popup>
+                                    </Marker>
+                                </MapContainer>
+                            ) : (
+                                <p style={{ color: 'gray' }}>Chưa có thông tin tọa độ cho tour này.</p>
+                            )}
+                        </section>
+                        {/* ======================= */}
                     </main>
 
                     {/* Phần 3: Sidebar bên phải */}
@@ -140,12 +179,12 @@ export default function TourDetail() {
                         <div className="booking-card">
                             <p className="price-tag">Giá hiển thị:</p>
                             <h2 className="price-amount">{Number(tour.price).toLocaleString()} VNĐ</h2>
-                            
+
                             <button className="btn-book-now">ĐẶT TOUR NGAY</button>
 
                             {isOwner && (
-                                <button 
-                                    className="btn-add-photos" 
+                                <button
+                                    className="btn-add-photos"
                                     onClick={() => setIsUploadModalOpen(true)}
                                     style={{
                                         marginTop: '10px',
@@ -162,7 +201,7 @@ export default function TourDetail() {
                                     <i className="fas fa-images"></i> THÊM ẢNH TOUR
                                 </button>
                             )}
-                            
+
                             <div className="creator-info">
                                 <p><strong>Người tổ chức:</strong> {tour.creator_name}</p>
                                 <p><strong>Số điện thoại:</strong> {tour.creator_phone}</p>
@@ -176,11 +215,11 @@ export default function TourDetail() {
                     </aside>
                 </div>
             </div>
-            
+
             {/* Modal Upload Ảnh */}
-            <ImageUploadModal 
-                tourId={id} 
-                isOpen={isUploadModalOpen} 
+            <ImageUploadModal
+                tourId={id}
+                isOpen={isUploadModalOpen}
                 onClose={() => setIsUploadModalOpen(false)}
                 onSuccess={handleUploadSuccess}
             />

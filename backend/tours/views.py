@@ -126,3 +126,19 @@ class TourImageUploadView(APIView):
             }, status=status.HTTP_201_CREATED)
         except Tour.DoesNotExist:
             return Response({"error": "Không tìm thấy tour!"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class LocationListView(APIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        # Trả về danh sách tỉnh thành (kèm tọa độ trung tâm để dùng cho map)
+        provinces = [
+            {"id": 1, "name": "Hà Nội", "lat": 21.0285, "lng": 105.8542},
+            {"id": 2, "name": "Hồ Chí Minh", "lat": 10.8231, "lng": 106.6297},
+            {"id": 3, "name": "Đà Nẵng", "lat": 16.0471, "lng": 108.2068},
+            {"id": 4, "name": "Nha Trang", "lat": 12.2388, "lng": 109.1967},
+            {"id": 5, "name": "Đà Lạt", "lat": 11.9404, "lng": 108.4583},
+            {"id": 6, "name": "Phú Quốc", "lat": 10.2899, "lng": 103.9840},
+        ]
+        return Response(provinces)

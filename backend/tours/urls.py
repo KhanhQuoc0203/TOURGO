@@ -1,7 +1,9 @@
 from django.urls import path
-from .views import TourCreateView, TourDetailAPIView, TourFilterView, TourImageUploadView, BookingView
+from .views import TourCreateView, TourDetailAPIView, TourFilterView, TourImageUploadView, BookingView, LocationListView
 
 urlpatterns = [
+    # trang danh sách địa điểm
+    path('locations/', LocationListView.as_view(), name='location-list'),
     # 1. Trang danh sách và Tạo
     path('', TourCreateView.as_view(), name='tour-create'), 
     # 2. Lọc Tour

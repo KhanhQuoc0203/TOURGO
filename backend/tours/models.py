@@ -17,6 +17,10 @@ class Tour(models.Model):
     
     slots = models.IntegerField(verbose_name="Số chỗ")
     image_url = models.URLField(max_length=500, null=True, blank=True, verbose_name="Link ảnh") # Để Hà hiển thị UI cho đẹp
+
+    latitude = models.FloatField(verbose_name="Vĩ độ (Lat)", null=True, blank=True)
+    longitude = models.FloatField(verbose_name="Kinh độ (Lng)", null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
 
     def __str__(self):
