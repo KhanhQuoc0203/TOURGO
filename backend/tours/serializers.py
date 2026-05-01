@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Tour, TourImage
+from .models import Booking, Tour, TourImage
 
 class TourImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,3 +14,9 @@ class TourSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tour
         fields = '__all__'
+        
+class BookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = '__all__'
+        read_only_fields = ['user', 'total_price', 'status']

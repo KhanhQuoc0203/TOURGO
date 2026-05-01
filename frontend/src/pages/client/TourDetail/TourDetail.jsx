@@ -14,13 +14,11 @@ import 'swiper/css/pagination';
 import './TourDetail.css';
 import ImageUploadModal from '../../../components/tour/ImageUploadModal';
 
-
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
 
 let DefaultIcon = L.icon({
     iconUrl: icon,
@@ -36,6 +34,35 @@ export default function TourDetail() {
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+    // --- Bổ sung State cho Booking (Hà thực hiện) ---
+    const [bookingData, setBookingData] = useState({
+        numPeople: 1,
+        date: ''
+    });
+
+    // --- Logic tính tổng tiền tạm tính ---
+    const totalPrice = bookingData.numPeople * (tour?.price || 0);
+
+    // --- Hàm xử lý gửi yêu cầu đặt tour (Khang kết nối API) ---
+    const handleBookingSubmit = async () => {
+        if (!bookingData.date) {
+            alert("Vui lòng chọn ngày khởi hành!");
+            return;
+        }
+        try {
+            const data = {
+                tour: tour.id,
+                number_of_people: bookingData.numPeople,
+                booking_date: bookingData.date
+            };
+            const res = await axiosClient.post('/bookings/', data);
+            alert(`Đặt tour thành công! Mã đơn hàng: ${res.data.id}`);
+        } catch (error) {
+            console.error("Lỗi đặt tour:", error);
+            alert(error.response?.data?.error || "Có lỗi xảy ra, vui lòng đăng nhập trước khi đặt tour!");
+        }
+    };
 
     useEffect(() => {
         const fetchMe = async () => {
@@ -62,7 +89,6 @@ export default function TourDetail() {
     }, [id]);
 
     const handleUploadSuccess = () => {
-        // Tải lại dữ liệu tour để cập nhật danh sách ảnh
         setLoading(true);
         getTourById(id).then(data => {
             setTour(data);
@@ -82,11 +108,9 @@ export default function TourDetail() {
     const formatImageUrl = (url) => {
         if (!url) return 'https://via.placeholder.com/1200x500';
         if (url.startsWith('http')) return url;
-        // Nếu là đường dẫn tương đối, nối thêm URL của backend
         return `http://127.0.0.1:8000${url}`;
     };
 
-    // Chuẩn bị danh sách ảnh cho Carousel
     const displayImages = (tour.tour_images && tour.tour_images.length > 0
         ? tour.tour_images.map(img => img.image)
         : [tour.image_url]).map(img => formatImageUrl(img));
@@ -95,7 +119,6 @@ export default function TourDetail() {
         <div className="tour-detail-page">
             <Navbar />
             <div className="tour-detail-container">
-                {/* Phần 1: Carousel Ảnh (Thay thế cho tour-hero cũ của Hà) */}
                 <div className="tour-carousel-wrapper">
                     <Swiper
                         modules={[Navigation, Pagination, Autoplay]}
@@ -121,7 +144,6 @@ export default function TourDetail() {
                 </div>
 
                 <div className="tour-content-layout">
-                    {/* Phần 2: Nội dung bên trái */}
                     <main className="tour-main">
                         <section className="info-badges">
                             <div className="badge-item">
@@ -149,7 +171,7 @@ export default function TourDetail() {
                                 {tour.schedule || "Lịch trình đang được cập nhật..."}
                             </div>
                         </section>
-                        {/* === THÊM BẢN ĐỒ VÀO ĐÂY === */}
+
                         <section className="tour-map-section">
                             <h3>Vị trí điểm đến</h3>
                             {(tour.latitude && tour.longitude) ? (
@@ -160,7 +182,7 @@ export default function TourDetail() {
                                     style={{ height: '400px', width: '100%', borderRadius: '12px', zIndex: 1 }}
                                 >
                                     <TileLayer
-                                        attribution='&copy; <a href="<https://www.openstreetmap.org/copyright>">OpenStreetMap</a>'
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     />
                                     <Marker position={[tour.latitude, tour.longitude]}>
@@ -171,16 +193,47 @@ export default function TourDetail() {
                                 <p style={{ color: 'gray' }}>Chưa có thông tin tọa độ cho tour này.</p>
                             )}
                         </section>
-                        {/* ======================= */}
                     </main>
 
-                    {/* Phần 3: Sidebar bên phải */}
                     <aside className="tour-sidebar">
                         <div className="booking-card">
                             <p className="price-tag">Giá hiển thị:</p>
                             <h2 className="price-amount">{Number(tour.price).toLocaleString()} VNĐ</h2>
 
-                            <button className="btn-book-now">ĐẶT TOUR NGAY</button>
+                            {/* --- PHẦN FORM ĐẶT TOUR CỦA HÀ VÀ KHANG --- */}
+                            <div className="booking-form" style={{ marginTop: '20px', padding: '15px', border: '1px solid #eee', borderRadius: '10px' }}>
+                                <h3 style={{ fontSize: '18px', marginBottom: '15px' }}>Đặt Tour Ngay</h3>
+                                
+                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Ngày khởi hành:</label>
+                                <input 
+                                    type="date" 
+                                    style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '5px', border: '1px solid #ddd' }}
+                                    onChange={(e) => setBookingData({...bookingData, date: e.target.value})} 
+                                />
+                                
+                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Số lượng người:</label>
+                                <input 
+                                    type="number" 
+                                    min="1" 
+                                    style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '5px', border: '1px solid #ddd' }}
+                                    value={bookingData.numPeople} 
+                                    onChange={(e) => setBookingData({...bookingData, numPeople: parseInt(e.target.value) || 1})} 
+                                />
+                                
+                                <div className="total-temp" style={{ marginBottom: '20px', padding: '10px', background: '#f9f9f9', borderRadius: '5px' }}>
+                                    <span style={{ fontSize: '14px' }}>Tổng tiền tạm tính:</span><br/>
+                                    <strong style={{ color: '#e67e22', fontSize: '18px' }}>{totalPrice.toLocaleString()} VNĐ</strong>
+                                </div>
+                                
+                                <button 
+                                    onClick={handleBookingSubmit} 
+                                    className="btn-book-now" 
+                                    style={{ width: '100%', background: '#e67e22', color: 'white', padding: '15px', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                    XÁC NHẬN ĐẶT TOUR
+                                </button>
+                            </div>
+                            {/* ------------------------------------------ */}
 
                             {isOwner && (
                                 <button
@@ -202,7 +255,7 @@ export default function TourDetail() {
                                 </button>
                             )}
 
-                            <div className="creator-info">
+                            <div className="creator-info" style={{ marginTop: '20px' }}>
                                 <p><strong>Người tổ chức:</strong> {tour.creator_name}</p>
                                 <p><strong>Số điện thoại:</strong> {tour.creator_phone}</p>
                             </div>
@@ -216,7 +269,6 @@ export default function TourDetail() {
                 </div>
             </div>
 
-            {/* Modal Upload Ảnh */}
             <ImageUploadModal
                 tourId={id}
                 isOpen={isUploadModalOpen}
