@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tour, TourImage
+from .models import Tour, TourImage, Booking
 
 class TourImageInline(admin.TabularInline):
     model = TourImage
@@ -15,3 +15,6 @@ class TourAdmin(admin.ModelAdmin):
 @admin.register(TourImage)
 class TourImageAdmin(admin.ModelAdmin):
     list_display = ('tour', 'image', 'created_at')
+@admin.register(Booking)
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'tour', 'number_of_people', 'total_price', 'status')

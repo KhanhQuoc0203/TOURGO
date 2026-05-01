@@ -44,7 +44,7 @@ export default function TourDetail() {
     // --- Logic tính tổng tiền tạm tính ---
     const totalPrice = bookingData.numPeople * (tour?.price || 0);
 
-    // --- Hàm xử lý gửi yêu cầu đặt tour (Khang kết nối API) ---
+    // --- Hàm xử lý gửi yêu cầu đặt tour (Đã fix URL chính xác) ---
     const handleBookingSubmit = async () => {
         if (!bookingData.date) {
             alert("Vui lòng chọn ngày khởi hành!");
@@ -56,7 +56,10 @@ export default function TourDetail() {
                 number_of_people: bookingData.numPeople,
                 booking_date: bookingData.date
             };
-            const res = await axiosClient.post('/bookings/', data);
+            
+            // THAY ĐỔI TẠI ĐÂY: Dùng đường dẫn đầy đủ cho Endpoint đặt tour
+            const res = await axiosClient.post('/tours/book/', data); 
+            
             alert(`Đặt tour thành công! Mã đơn hàng: ${res.data.id}`);
         } catch (error) {
             console.error("Lỗi đặt tour:", error);
@@ -200,7 +203,6 @@ export default function TourDetail() {
                             <p className="price-tag">Giá hiển thị:</p>
                             <h2 className="price-amount">{Number(tour.price).toLocaleString()} VNĐ</h2>
 
-                            {/* --- PHẦN FORM ĐẶT TOUR CỦA HÀ VÀ KHANG --- */}
                             <div className="booking-form" style={{ marginTop: '20px', padding: '15px', border: '1px solid #eee', borderRadius: '10px' }}>
                                 <h3 style={{ fontSize: '18px', marginBottom: '15px' }}>Đặt Tour Ngay</h3>
                                 
@@ -233,7 +235,6 @@ export default function TourDetail() {
                                     XÁC NHẬN ĐẶT TOUR
                                 </button>
                             </div>
-                            {/* ------------------------------------------ */}
 
                             {isOwner && (
                                 <button

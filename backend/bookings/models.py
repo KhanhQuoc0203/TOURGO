@@ -8,4 +8,3 @@ from tours.models import Tour
 #     number_of_people = models.IntegerField()
 #     status = models.CharField(max_length=20, default='PENDING')
 #     created_at = models.DateTimeField(auto_now_add=True)
-

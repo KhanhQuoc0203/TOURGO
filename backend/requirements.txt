@@ -4,3 +4,6 @@ django-cors-headers
 djangorestframework-simplejwt
 mssql-django
 pyodbc
+django-cloudinary-storage
+cloudinary
+Pillow

@@ -2,12 +2,14 @@ from rest_framework import generics, filters, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
-from .models import Tour, TourImage
+from .models import Tour, TourImage, Booking
 from .serializers import BookingSerializer, TourSerializer, TourImageSerializer
 from .permissions import IsAdminOrProvider
 import logging
 from rest_framework import permissions
-
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from datetime import date
 logger = logging.getLogger('app_logger')
 
 # CHỈ DÙNG MỘT CLASS NÀY CHO CẢ XEM DANH SÁCH VÀ TẠO TOUR
@@ -84,26 +86,76 @@ class TourDetailAPIView(APIView):
             return Response(TourSerializer(tour, context={'request': request}).data)
         except Tour.DoesNotExist:
             return Response({"error": "Không tìm thấy!"}, status=404)
+logger = logging.getLogger('app_logger')
 
+@method_decorator(csrf_exempt, name='dispatch')
 class BookingView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+
     def post(self, request):
-        tour_id = request.data.get('tour_id')
+        # 1. Lấy dữ liệu từ Frontend
+        tour_id = request.data.get('tour')
+        num_people = request.data.get('number_of_people')
+
+        if not tour_id or not num_people:
+            return Response(
+                {"error": "Thiếu thông tin tour hoặc số lượng người!"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
+            # 2. Lấy thông tin tour từ Database
             tour = Tour.objects.get(id=tour_id)
-            if tour.slots <= 0:
-                logger.error(f"Đặt tour lỗi: Tour '{tour.title}' đã hết chỗ.")
-                return Response({"error": "Tour đã hết chỗ!"}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Giả lập đặt tour thành công
-            return Response({"message": "Đặt tour thành công!"}, status=status.HTTP_201_CREATED)
+            # Ép kiểu số người sang số nguyên
+            try:
+                num_people = int(num_people)
+            except (ValueError, TypeError):
+                return Response({"error": "Số lượng người không hợp lệ!"}, status=400)
+
+            # --- 3. LOGIC VALIDATION CỦA TÂN: Kiểm tra ngày khởi hành ---
+            # Ngăn chặn đặt tour nếu ngày khởi hành đã qua hoặc là ngày hôm nay
+            if tour.departure_date <= date.today():
+                logger.warning(f"User {request.user} định đặt tour đã quá hạn: {tour.title}")
+                return Response(
+                    {"error": f"Không thể đặt tour này. Ngày khởi hành ({tour.departure_date}) phải sau ngày hiện tại!"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # --- 4. LOGIC VALIDATION CỦA HÀ: Kiểm tra số chỗ trống ---
+            if tour.slots <= 0:
+                return Response({"error": "Tour này hiện đã hết sạch chỗ!"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if num_people > tour.slots:
+                return Response(
+                    {"number_of_people": [f"Tour này chỉ còn {tour.slots} chỗ trống!"]}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # --- 5. LƯU DỮ LIỆU VÀ CẬP NHẬT DATABASE ---
+            serializer = BookingSerializer(data=request.data)
+            if serializer.is_valid():
+                # Lưu thông tin người đặt
+                serializer.save(user=request.user) 
+                
+                # Trừ số chỗ còn trống trực tiếp vào bảng Tour
+                tour.slots -= num_people
+                tour.save()
+
+                logger.info(f"Đặt tour thành công: User {request.user} - Tour {tour.title}")
+                return Response(
+                    {"message": "Đặt tour thành công!", "remaining_slots": tour.slots}, 
+                    status=status.HTTP_201_CREATED
+                )
+            
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         except Tour.DoesNotExist:
-            logger.error(f"Đặt tour lỗi: Không tìm thấy Tour ID {tour_id}")
-            return Response({"error": "Không tìm thấy tour!"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Không tìm thấy tour này trong hệ thống!"}, status=status.HTTP_404_NOT_FOUND)
+        
         except Exception as e:
             logger.exception("Lỗi hệ thống khi đặt tour")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            return Response({"error": f"Lỗi hệ thống: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class TourImageUploadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
@@ -145,15 +197,14 @@ class LocationListView(APIView):
         return Response(provinces)
     
     
+from rest_framework import generics, permissions
+from .models import Booking
+from .serializers import BookingSerializer
+
 class BookingCreateView(generics.CreateAPIView):
+    queryset = Booking.objects.all()
     serializer_class = BookingSerializer
-    permission_classes = [permissions.IsAuthenticated] # Bắt buộc đăng nhập
+    permission_classes = [permissions.IsAuthenticated] # Bắt buộc đăng nhập tại IUH
 
     def perform_create(self, serializer):
-        tour = serializer.validated_data['tour']
-        num_people = serializer.validated_data['number_of_people']
-        # Tự động tính tổng tiền từ giá tour và số người
-        total = tour.price * num_people
-        serializer.save(user=self.request.user, total_price=total)
-    
-    
+        serializer.save()

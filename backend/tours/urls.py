@@ -2,6 +2,7 @@ from django.urls import path
 from .views import TourCreateView, TourDetailAPIView, TourFilterView, TourImageUploadView, BookingView, LocationListView
 
 urlpatterns = [
+    path('book/', BookingView.as_view(), name='tour-book'),
     # trang danh sách địa điểm
     path('locations/', LocationListView.as_view(), name='location-list'),
     # 1. Trang danh sách và Tạo
@@ -12,6 +13,4 @@ urlpatterns = [
     path('<int:pk>/', TourDetailAPIView.as_view(), name='tour-detail'),
     # 4. Upload ảnh cho Tour (Nhiệm vụ Khang)
     path('<int:tour_id>/upload-images/', TourImageUploadView.as_view(), name='tour-upload-images'),
-    # 5. Đặt Tour (Nhiệm vụ Tân)
-    path('book/', BookingView.as_view(), name='tour-book'),
 ]

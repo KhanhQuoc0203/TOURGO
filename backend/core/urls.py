@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/login/', LoginView.as_view(), name='login_direct'),
     path('api/me/', MeView.as_view(), name='me'),
      path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
 ]
 
 if settings.DEBUG:
