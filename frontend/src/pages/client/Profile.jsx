@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-// import axiosClient from '../../api/axiosClient';
+import { Link } from 'react-router-dom';
 import './Profile.css';
 import api from '../../api/axios.js'
 
@@ -65,6 +65,10 @@ export default function Profile() {
                     <button onClick={handleLogout} className="btn-logout">
                         ĐĂNG XUẤT
                     </button>
+                    
+                    <Link to="/my-orders" className="btn-orders">
+                        CHI TIẾT ĐƠN HÀNG
+                    </Link>
                 </div>
             </div>
         </div>

@@ -36,3 +36,17 @@ export const uploadTourImages = async(tourId, files) => {
     });
     return response.data;
 };
+
+// --- THÊM HÀM CHO NGÀY 13 (HÀ & KHANG) ---
+
+// Lấy danh sách đơn hàng của người dùng đang đăng nhập
+export const getMyBookings = async () => {
+    const response = await axiosClient.get('tours/my-bookings/');
+    return response.data;
+};
+
+// Hủy đơn hàng dựa trên ID
+export const cancelBooking = async (id) => {
+    const response = await axiosClient.patch(`tours/bookings/${id}/`);
+    return response.data;
+};

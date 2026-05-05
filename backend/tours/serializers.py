@@ -45,3 +45,12 @@ class BookingSerializer(serializers.ModelSerializer):
             **validated_data
         )
         return booking
+
+# --- THÊM SERIALIZER CHO NGÀY 13 (TÂN) ---
+class BookingDetailSerializer(serializers.ModelSerializer):
+    tour_details = TourSerializer(source='tour', read_only=True)
+    
+    class Meta:
+        model = Booking
+        fields = '__all__'
+        read_only_fields = ['user', 'total_price', 'status']

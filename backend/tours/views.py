@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
 from .models import Tour, TourImage, Booking
-from .serializers import BookingSerializer, TourSerializer, TourImageSerializer
+from .serializers import BookingSerializer, TourSerializer, TourImageSerializer, BookingDetailSerializer
 from .permissions import IsAdminOrProvider
 import logging
 from rest_framework import permissions
@@ -115,7 +115,7 @@ class BookingView(APIView):
 
             # --- 3. LOGIC VALIDATION CỦA TÂN: Kiểm tra ngày khởi hành ---
             # Ngăn chặn đặt tour nếu ngày khởi hành đã qua hoặc là ngày hôm nay
-            if tour.departure_date <= date.today():
+            if tour.departure_date and tour.departure_date <= date.today():
                 logger.warning(f"User {request.user} định đặt tour đã quá hạn: {tour.title}")
                 return Response(
                     {"error": f"Không thể đặt tour này. Ngày khởi hành ({tour.departure_date}) phải sau ngày hiện tại!"}, 
@@ -133,18 +133,16 @@ class BookingView(APIView):
                 )
 
             # --- 5. LƯU DỮ LIỆU VÀ CẬP NHẬT DATABASE ---
-            serializer = BookingSerializer(data=request.data)
+            # Truyền context={'request': request} để serializer lấy được user đang đăng nhập
+            serializer = BookingSerializer(data=request.data, context={'request': request})
+            
             if serializer.is_valid():
-                # Lưu thông tin người đặt
-                serializer.save(user=request.user) 
-                
-                # Trừ số chỗ còn trống trực tiếp vào bảng Tour
-                tour.slots -= num_people
-                tour.save()
+                # Serializer.save() đã bao gồm logic trừ slots và tính total_price
+                booking = serializer.save() 
 
                 logger.info(f"Đặt tour thành công: User {request.user} - Tour {tour.title}")
                 return Response(
-                    {"message": "Đặt tour thành công!", "remaining_slots": tour.slots}, 
+                    {"message": "Đặt tour thành công!", "id": booking.id}, 
                     status=status.HTTP_201_CREATED
                 )
             
@@ -208,3 +206,55 @@ class BookingCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
+
+# --- THÊM VIEW CHO NGÀY 13 (TÂN & KHÁNH) ---
+
+class UserBookingListView(generics.ListAPIView):
+    """
+    API lấy danh sách đơn hàng của chính người dùng đang đăng nhập
+    """
+    serializer_class = BookingDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Chỉ trả về các đơn hàng của user hiện tại, sắp xếp mới nhất lên đầu
+        return Booking.objects.filter(user=self.request.user).order_by('-created_at')
+
+class BookingDetailView(APIView):
+    """
+    API xem chi tiết và Hủy đơn hàng
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            booking = Booking.objects.get(pk=pk, user=request.user)
+            serializer = BookingDetailSerializer(booking, context={'request': request})
+            return Response(serializer.data)
+        except Booking.DoesNotExist:
+            return Response({"error": "Không tìm thấy đơn hàng!"}, status=404)
+
+    def patch(self, request, pk):
+        """
+        Logic Hủy đơn hàng: Chuyển trạng thái sang 'cancelled' và hoàn trả slots cho Tour
+        """
+        try:
+            booking = Booking.objects.get(pk=pk, user=request.user)
+            
+            if booking.status == 'cancelled':
+                return Response({"error": "Đơn hàng này đã được hủy trước đó rồi!"}, status=400)
+
+            # Cập nhật trạng thái đơn hàng
+            booking.status = 'cancelled'
+            booking.save()
+
+            # Hoàn trả lại số lượng chỗ (slots) cho Tour
+            tour = booking.tour
+            tour.slots += booking.number_of_people
+            tour.save()
+
+            logger.info(f"Hủy đơn hàng thành công: User {request.user} - Booking ID {pk}")
+            return Response({"message": "Hủy đơn hàng thành công!", "status": "cancelled"})
+            
+        except Booking.DoesNotExist:
+            return Response({"error": "Không tìm thấy đơn hàng để hủy!"}, status=404)

@@ -10,8 +10,7 @@ import TourDetail from './pages/client/TourDetail/TourDetail';
 import Profile from './pages/client/Profile';
 import SearchResult from './pages/client/SearchResult/SearchResult';
 import ToursPage from './components/tour/ToursPage';
-
-
+import MyOrders from './pages/client/MyOrders/MyOrders';
 
 function AppContent() {
   const location = useLocation();
@@ -33,6 +32,7 @@ function AppContent() {
         <Route path="/tours/:id" element={<TourDetail />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/search" element={<SearchResult />} />
+        <Route path="/my-orders" element={<MyOrders />} />
       </Routes>
     </>
   );

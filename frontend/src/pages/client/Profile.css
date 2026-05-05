@@ -79,6 +79,27 @@
     background-color: #e53935;
 }
 
+.btn-orders {
+    display: block;
+    width: 100%;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    margin-top: 10px;
+    transition: background 0.3s;
+    box-sizing: border-box;
+}
+
+.btn-orders:hover {
+    background-color: #2980b9;
+    color: white;
+}
+
 .loading {
     text-align: center;
     padding: 50px;

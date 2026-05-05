@@ -58,7 +58,7 @@ export default function TourDetail() {
             };
             
             // THAY ĐỔI TẠI ĐÂY: Dùng đường dẫn đầy đủ cho Endpoint đặt tour
-            const res = await axiosClient.post('/tours/book/', data); 
+            const res = await axiosClient.post('tours/book/', data); 
             
             alert(`Đặt tour thành công! Mã đơn hàng: ${res.data.id}`);
         } catch (error) {
