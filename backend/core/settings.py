@@ -26,9 +26,9 @@ SECRET_KEY = 'django-insecure-&uc)5d#w=*yxeozb71_1ghek+4wb3$w$hd)b7-(r24gs7m^@jf
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
-
+#ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1', 'cling-blinks-idealize.ngrok-free.dev']
+CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.dev']
 # Application definition
 
 INSTALLED_APPS = [
@@ -233,3 +233,17 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_CREDENTIALS = True
+
+# --- Cấu hình VNPay Sandbox (Khánh thêm vào settings.py) ---
+
+# Mã website tại VNPay (Lấy trên trang sandbox vnpay)
+VNP_TMN_CODE = "NCB00011" 
+
+# Chuỗi bí mật để tạo mã hash (Lấy trên trang sandbox vnpay)
+VNP_HASH_SECRET = "VNPAY2023" # Thay bằng mã thật của nhóm
+
+# Link cổng thanh toán của VNPay
+VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+
+# Đường dẫn quay về web mình sau khi trả tiền xong (Khang đã tạo route này)
+VNP_RETURN_URL = "https://cling-blinks-idealize.ngrok-free.dev/payment-result"

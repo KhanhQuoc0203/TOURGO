@@ -40,13 +40,28 @@ export const uploadTourImages = async(tourId, files) => {
 // --- THÊM HÀM CHO NGÀY 13 (HÀ & KHANG) ---
 
 // Lấy danh sách đơn hàng của người dùng đang đăng nhập
-export const getMyBookings = async () => {
+export const getMyBookings = async() => {
     const response = await axiosClient.get('tours/my-bookings/');
     return response.data;
 };
 
 // Hủy đơn hàng dựa trên ID
-export const cancelBooking = async (id) => {
+export const cancelBooking = async(id) => {
     const response = await axiosClient.patch(`tours/bookings/${id}/`);
     return response.data;
-};
+};
+
+// call API tạo liên kết thanh toán VNPay
+const handleProcessPayment = async() => {
+    try {
+        // Gọi API của Khánh để lấy link
+        const res = await axiosClient.post('/create-payment/', { booking_id: bookingId });
+
+        if (res.data.payment_url) {
+            // Chuyển hướng trình duyệt sang VNPay
+            window.location.href = res.data.payment_url;
+        }
+    } catch (error) {
+        alert("Không thể tạo liên kết thanh toán. Vui lòng thử lại!");
+    }
+};

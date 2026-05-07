@@ -10,3 +10,8 @@ python manage.py runserver
 
 # chạy frontend
 npm run dev 
+
+# 4. Tạo file ghi nhận sự thay đổi:
+python manage.py makemigrations
+# 5. Thực thi cập nhật vào Database (SQL Server):
+python manage.py migrate

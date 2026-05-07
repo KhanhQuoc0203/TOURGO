@@ -11,6 +11,9 @@ import Profile from './pages/client/Profile';
 import SearchResult from './pages/client/SearchResult/SearchResult';
 import ToursPage from './components/tour/ToursPage';
 import MyOrders from './pages/client/MyOrders/MyOrders';
+import PaymentSelection from './pages/client/Payment/PaymentSelection';
+import Contact from './pages/client/Contact/Contact';
+import PaymentResult from './pages/client/Payment/PaymentResult';
 
 function AppContent() {
   const location = useLocation();
@@ -33,6 +36,9 @@ function AppContent() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/search" element={<SearchResult />} />
         <Route path="/my-orders" element={<MyOrders />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/payment/:bookingId" element={<PaymentSelection />} />
+        <Route path="/payment-result" element={<PaymentResult/>} />
       </Routes>
     </>
   );

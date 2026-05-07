@@ -1,0 +1,154 @@
+/* Tông màu chủ đạo từ trang Home của Hà */
+
+:root {
+    --primary-green: #6ab04c;
+    --dark-glass: rgba(45, 52, 54, 0.9);
+    --light-bg: #f0f2f5;
+    --text-dark: #2d3436;
+}
+
+.payment-page {
+    min-height: 100vh;
+    /* Sử dụng background gradient nhẹ cho sang trọng */
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    /* QUAN TRỌNG: Đẩy nội dung xuống dưới Navbar (tầm 100px - 120px) */
+    padding: 120px 20px 50px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.payment-container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    /* Hiệu ứng kính mờ giống Navbar */
+    width: 100%;
+    max-width: 550px;
+    padding: 40px;
+    border-radius: 30px;
+    /* Bo tròn mạnh theo style trang Home */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.payment-container h2 {
+    color: var(--text-dark);
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+}
+
+
+/* Tóm tắt đơn hàng */
+
+.order-summary {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    border: 1px dashed #ddd;
+}
+
+.order-summary h3 {
+    margin-bottom: 15px;
+    color: var(--primary-green);
+    font-size: 20px;
+}
+
+.order-summary p {
+    margin: 8px 0;
+    color: #636e72;
+    display: flex;
+    justify-content: space-between;
+}
+
+.total-row {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid #eee;
+    font-size: 20px;
+}
+
+.price {
+    color: #d35400;
+    /* Màu cam đậm cho giá tiền */
+    font-weight: 800;
+}
+
+
+/* Cổng thanh toán */
+
+.payment-options p {
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border: 2px solid #f1f2f6;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.option-item:hover,
+.option-item.active {
+    border-color: var(--primary-green);
+    background: #f0fff0;
+}
+
+.option-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: 15px;
+}
+
+.option-content img {
+    height: 35px;
+    object-fit: contain;
+}
+
+
+/* Nút bấm điều hướng */
+
+.payment-actions {
+    display: flex;
+    gap: 20px;
+    margin-top: 40px;
+}
+
+.btn-back {
+    flex: 1;
+    padding: 15px;
+    border-radius: 15px;
+    border: none;
+    background: #dfe6e9;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-pay {
+    flex: 2;
+    padding: 15px;
+    border-radius: 15px;
+    border: none;
+    background: var(--primary-green);
+    /* Xanh lá từ trang Home */
+    color: white;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 10px 20px rgba(106, 176, 76, 0.3);
+}
+
+.btn-pay:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 25px rgba(106, 176, 76, 0.4);
+}

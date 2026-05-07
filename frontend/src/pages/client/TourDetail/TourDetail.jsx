@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // Thêm useNavigate để chuyển trang
 import { getTourById } from '../../../api/tourApi';
 import axiosClient from '../../../api/axiosClient';
 import Navbar from '../../../components/layout/Navbar';
 
-// --- Thêm Swiper cho Hà ---
+// --- Swiper cho Carousel ảnh ---
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
@@ -14,6 +14,7 @@ import 'swiper/css/pagination';
 import './TourDetail.css';
 import ImageUploadModal from '../../../components/tour/ImageUploadModal';
 
+// --- Bản đồ Leaflet ---
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -30,12 +31,13 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 export default function TourDetail() {
     const { id } = useParams();
+    const navigate = useNavigate(); // Khởi tạo điều hướng
     const [tour, setTour] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-    // --- Bổ sung State cho Booking (Hà thực hiện) ---
+    // --- State cho Booking (Hà thực hiện) ---
     const [bookingData, setBookingData] = useState({
         numPeople: 1,
         date: ''
@@ -44,7 +46,7 @@ export default function TourDetail() {
     // --- Logic tính tổng tiền tạm tính ---
     const totalPrice = bookingData.numPeople * (tour?.price || 0);
 
-    // --- Hàm xử lý gửi yêu cầu đặt tour (Đã fix URL chính xác) ---
+    // --- Hàm xử lý gửi yêu cầu đặt tour ---
     const handleBookingSubmit = async () => {
         if (!bookingData.date) {
             alert("Vui lòng chọn ngày khởi hành!");
@@ -57,10 +59,15 @@ export default function TourDetail() {
                 booking_date: bookingData.date
             };
             
-            // THAY ĐỔI TẠI ĐÂY: Dùng đường dẫn đầy đủ cho Endpoint đặt tour
+            // Endpoint đặt tour của Backend
             const res = await axiosClient.post('tours/book/', data); 
             
-            alert(`Đặt tour thành công! Mã đơn hàng: ${res.data.id}`);
+            alert(`Đặt tour thành công!`);
+            
+            // CHUYỂN HƯỚNG SANG TRANG THANH TOÁN (Khang thực hiện)
+            // Truyền ID của booking vừa tạo vào URL
+            navigate(`/payment/${res.data.id}`); 
+            
         } catch (error) {
             console.error("Lỗi đặt tour:", error);
             alert(error.response?.data?.error || "Có lỗi xảy ra, vui lòng đăng nhập trước khi đặt tour!");
@@ -120,8 +127,8 @@ export default function TourDetail() {
 
     return (
         <div className="tour-detail-page">
-            <Navbar />
             <div className="tour-detail-container">
+                {/* Phần 1: Carousel Ảnh */}
                 <div className="tour-carousel-wrapper">
                     <Swiper
                         modules={[Navigation, Pagination, Autoplay]}
@@ -147,6 +154,7 @@ export default function TourDetail() {
                 </div>
 
                 <div className="tour-content-layout">
+                    {/* Phần 2: Nội dung chính */}
                     <main className="tour-main">
                         <section className="info-badges">
                             <div className="badge-item">
@@ -198,11 +206,13 @@ export default function TourDetail() {
                         </section>
                     </main>
 
+                    {/* Phần 3: Sidebar đặt tour */}
                     <aside className="tour-sidebar">
                         <div className="booking-card">
                             <p className="price-tag">Giá hiển thị:</p>
                             <h2 className="price-amount">{Number(tour.price).toLocaleString()} VNĐ</h2>
 
+                            {/* Form Đặt Tour (Hà thiết kế logic) */}
                             <div className="booking-form" style={{ marginTop: '20px', padding: '15px', border: '1px solid #eee', borderRadius: '10px' }}>
                                 <h3 style={{ fontSize: '18px', marginBottom: '15px' }}>Đặt Tour Ngay</h3>
                                 

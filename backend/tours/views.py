@@ -11,6 +11,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from datetime import date
 logger = logging.getLogger('app_logger')
+import hashlib
+import hmac
+import urllib.parse
+from datetime import datetime
+from django.conf import settings
+
 
 # CHỈ DÙNG MỘT CLASS NÀY CHO CẢ XEM DANH SÁCH VÀ TẠO TOUR
 class TourCreateView(generics.ListCreateAPIView):
@@ -258,3 +264,59 @@ class BookingDetailView(APIView):
             
         except Booking.DoesNotExist:
             return Response({"error": "Không tìm thấy đơn hàng để hủy!"}, status=404)
+        
+# -- API Tạo Link Thanh Toán
+class PaymentLinkView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        booking_id = request.data.get('booking_id')
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return Response({"error": "Không tìm thấy đơn hàng"}, status=404)
+
+        vnp_params = {
+            'vnp_Version': '2.1.0',
+            'vnp_Command': 'pay',
+            'vnp_TmnCode': settings.VNP_TMN_CODE,
+            'vnp_Amount': int(booking.total_price * 100), # Đã nhân 100 đúng rồi nè
+            'vnp_CurrCode': 'VND',
+            'vnp_TxnRef': str(booking.id) + "_" + datetime.now().strftime('%H%M%S'),
+            'vnp_OrderInfo': f"Thanh toan tour {booking.id}", # Hạn chế tiếng Việt có dấu ở đây
+            'vnp_OrderType': 'other',
+            'vnp_Locale': 'vn',
+            'vnp_ReturnUrl': settings.VNP_RETURN_URL,
+            'vnp_IpAddr': '127.0.0.1',
+            'vnp_CreateDate': datetime.now().strftime('%Y%m%d%H%M%S'),
+        }
+
+        # --- BƯỚC QUAN TRỌNG: TẠO CHỮ KÝ BẢO MẬT ---
+        # 1. Sắp xếp dữ liệu theo A-Z
+        input_data = sorted(vnp_params.items())
+        query_string = urllib.parse.urlencode(input_data, quote_via=urllib.parse.quote)
+        
+        # 2. Tạo mã Hash bằng HashSecret từ settings
+        secret_key = settings.VNP_HASH_SECRET
+        vnp_secure_hash = hmac.new(
+            secret_key.encode('utf-8'),
+            query_string.encode('utf-8'),
+            hashlib.sha512
+        ).hexdigest()
+
+        # 3. Nối mã Hash vào cuối URL
+        final_url = f"https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?{query_string}&vnp_SecureHash={vnp_secure_hash}"
+
+        return Response({"payment_url": final_url}) 
+    
+class VNPayIPNView(APIView):
+    def get(self, request):
+        input_data = request.GET.dict()
+        vnp_secure_hash = input_data.pop('vnp_SecureHash', None)
+        
+        # Logic của Tân: 
+        # 1. Kiểm tra chữ ký (vnp_SecureHash) có khớp không.
+        # 2. Kiểm tra số tiền vnp_Amount có khớp với Booking không.
+        # 3. Nếu mọi thứ khớp và vnp_ResponseCode == '00' -> Trả về kết quả cho Khánh xử lý.
+        
+        return Response({"RspCode": "00", "Message": "Confirm Success"})
