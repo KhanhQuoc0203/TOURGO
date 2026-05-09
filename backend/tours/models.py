@@ -65,15 +65,53 @@ class Booking(models.Model):
         verbose_name = "Đơn đặt tour"
         verbose_name_plural = "Các đơn đặt tour"
 
-# --- PHẦN CỦA HÀ (MODEL TRANSACTION)       
+# --- PHẦN CỦA TÂN VÀ KHANG (NGÀY 14 & 15: THANH TOÁN VNPAY) ---
+
 class Transaction(models.Model):
-    booking = models.OneToOneField('Booking', on_delete=models.CASCADE, related_name='transaction')
-    vnp_txn_ref = models.CharField(max_length=100, unique=True) # Mã đơn hàng gửi đi
+    """
+    Lưu vết từng lần bấm 'Thanh toán' của khách hàng
+    """
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='transaction')
+    vnp_txn_ref = models.CharField(max_length=100, unique=True) # Mã tham chiếu gửi sang VNPay
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     order_info = models.TextField()
-    vnp_response_code = models.CharField(max_length=10, null=True, blank=True) # 00 là thành công
-    vnp_transaction_no = models.CharField(max_length=100, null=True, blank=True) # Mã từ VNPay trả về
+    
+    # Kết quả trả về từ VNPay
+    vnp_response_code = models.CharField(max_length=10, null=True, blank=True)
+    vnp_transaction_no = models.CharField(max_length=100, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Transaction {self.vnp_txn_ref} - {self.amount}"
+        return f"Txn {self.vnp_txn_ref} - Booking {self.booking.id}"
+
+class Payment(models.Model):
+    """
+    Lưu thông tin khi thanh toán thành công
+    """
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_method = models.CharField(max_length=50, default="VNPay")
+    status = models.CharField(max_length=20, default="PENDING") # PENDING, SUCCESS, FAILED
+    transaction_code = models.CharField(max_length=255, null=True, blank=True) # Mã từ VNPay
+    vnp_txn_ref = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Payment {self.id} for Booking {self.booking.id}"
+
+class Revenue(models.Model):
+    """
+    Quản lý doanh thu sàn và hoa hồng của nhà cung cấp (Day 24)
+    """
+    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='revenue')
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    creator_share = models.DecimalField(max_digits=12, decimal_places=2) # Tiền nhà cung cấp nhận
+    admin_share = models.DecimalField(max_digits=12, decimal_places=2)   # Phí sàn (ví dụ 10%)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Revenue from Payment {self.payment.id}"
+
+

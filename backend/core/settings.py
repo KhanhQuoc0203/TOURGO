@@ -92,7 +92,7 @@ DATABASES = {
         'PORT': '',  # Thường để trống cho bản Express hoặc đổi theo cấu hình thực tế
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
-            'extra_params': 'TrustServerCertificate=yes',
+            'extra_params': 'TrustServerCertificate=yes;Encrypt=no',
         },
     }
 }
@@ -234,16 +234,9 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_CREDENTIALS = True
 
-# --- Cấu hình VNPay Sandbox (Khánh thêm vào settings.py) ---
 
-# Mã website tại VNPay (Lấy trên trang sandbox vnpay)
-VNP_TMN_CODE = "NCB00011" 
-
-# Chuỗi bí mật để tạo mã hash (Lấy trên trang sandbox vnpay)
-VNP_HASH_SECRET = "VNPAY2023" # Thay bằng mã thật của nhóm
-
-# Link cổng thanh toán của VNPay
-VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-
-# Đường dẫn quay về web mình sau khi trả tiền xong (Khang đã tạo route này)
-VNP_RETURN_URL = "https://cling-blinks-idealize.ngrok-free.dev/payment-result"
+# --- VietQR Settings (Khang) ---
+VIETQR_BANK_ID = "MB" # Ví dụ: MB, VCB, ICB, ...
+VIETQR_ACCOUNT_NO = "0376706825" 
+VIETQR_ACCOUNT_NAME = "NGUYEN HUYNH NHAT TAN"
+

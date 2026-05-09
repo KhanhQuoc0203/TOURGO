@@ -1,8 +1,9 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, filters, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
-from .models import Tour, TourImage, Booking
+from .models import Tour, TourImage, Booking, Transaction, Payment, Revenue
 from .serializers import BookingSerializer, TourSerializer, TourImageSerializer, BookingDetailSerializer
 from .permissions import IsAdminOrProvider
 import logging
@@ -11,10 +12,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from datetime import date
 logger = logging.getLogger('app_logger')
-import hashlib
-import hmac
-import urllib.parse
-from datetime import datetime
 from django.conf import settings
 
 
@@ -146,7 +143,7 @@ class BookingView(APIView):
                 # Serializer.save() đã bao gồm logic trừ slots và tính total_price
                 booking = serializer.save() 
 
-                logger.info(f"Đặt tour thành công: User {request.user} - Tour {tour.title}")
+                logger.info(f"Dat tour thanh cong: User {request.user} - Tour {tour.title}")
                 return Response(
                     {"message": "Đặt tour thành công!", "id": booking.id}, 
                     status=status.HTTP_201_CREATED
@@ -265,8 +262,15 @@ class BookingDetailView(APIView):
         except Booking.DoesNotExist:
             return Response({"error": "Không tìm thấy đơn hàng để hủy!"}, status=404)
         
-# -- API Tạo Link Thanh Toán
-class PaymentLinkView(APIView):
+
+
+import datetime
+
+
+class VietQRCreateView(APIView):
+    """
+    API Tạo mã VietQR - Ngày 15 (Khang)
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -276,47 +280,83 @@ class PaymentLinkView(APIView):
         except Booking.DoesNotExist:
             return Response({"error": "Không tìm thấy đơn hàng"}, status=404)
 
-        vnp_params = {
-            'vnp_Version': '2.1.0',
-            'vnp_Command': 'pay',
-            'vnp_TmnCode': settings.VNP_TMN_CODE,
-            'vnp_Amount': int(booking.total_price * 100), # Đã nhân 100 đúng rồi nè
-            'vnp_CurrCode': 'VND',
-            'vnp_TxnRef': str(booking.id) + "_" + datetime.now().strftime('%H%M%S'),
-            'vnp_OrderInfo': f"Thanh toan tour {booking.id}", # Hạn chế tiếng Việt có dấu ở đây
-            'vnp_OrderType': 'other',
-            'vnp_Locale': 'vn',
-            'vnp_ReturnUrl': settings.VNP_RETURN_URL,
-            'vnp_IpAddr': '127.0.0.1',
-            'vnp_CreateDate': datetime.now().strftime('%Y%m%d%H%M%S'),
-        }
+        # 1. Tạo Transaction mới (Trạng thái Pending)
+        txn_ref = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + str(booking.id)
+        Transaction.objects.create(
+            booking=booking,
+            vnp_txn_ref=txn_ref,
+            amount=booking.total_price
+        )
 
-        # --- BƯỚC QUAN TRỌNG: TẠO CHỮ KÝ BẢO MẬT ---
-        # 1. Sắp xếp dữ liệu theo A-Z
-        input_data = sorted(vnp_params.items())
-        query_string = urllib.parse.urlencode(input_data, quote_via=urllib.parse.quote)
-        
-        # 2. Tạo mã Hash bằng HashSecret từ settings
-        secret_key = settings.VNP_HASH_SECRET
-        vnp_secure_hash = hmac.new(
-            secret_key.encode('utf-8'),
-            query_string.encode('utf-8'),
-            hashlib.sha512
-        ).hexdigest()
+        # 2. Tạo link VietQR (Sử dụng VietQR.io)
+        # Định dạng: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>&accountName=<NAME>
+        bank_id = settings.VIETQR_BANK_ID
+        account_no = settings.VIETQR_ACCOUNT_NO
+        account_name = settings.VIETQR_ACCOUNT_NAME
+        amount = int(booking.total_price)
+        content = f"TOURGO{booking.id}" # Nội dung chuyển khoản
 
-        # 3. Nối mã Hash vào cuối URL
-        final_url = f"https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?{query_string}&vnp_SecureHash={vnp_secure_hash}"
+        qr_url = f"https://img.vietqr.io/image/{bank_id}-{account_no}-qr_only.png?amount={amount}&addInfo={content}&accountName={account_name}"
 
-        return Response({"payment_url": final_url}) 
-    
-class VNPayIPNView(APIView):
+        return Response({
+            "qr_url": qr_url,
+            "bank_id": bank_id,
+            "account_no": account_no,
+            "account_name": account_name,
+            "amount": amount,
+            "content": content
+        }, status=200)
+
+
+class BookingConfirmPaymentView(APIView):
+    """
+    API để khách hàng thông báo đã chuyển khoản VietQR - Ngày 15 (Tân)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(id=pk, user=request.user)
+            booking.status = 'confirmed'
+            booking.save()
+            return Response({"message": "Thông báo thành công, vui lòng chờ Admin duyệt"}, status=200)
+        except Booking.DoesNotExist:
+            return Response({"error": "Không tìm thấy đơn hàng"}, status=404)
+
+class AdminBookingListView(APIView):
+    """
+    API Admin: Danh sách tất cả đơn hàng - Ngày 16 (Khang)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
-        input_data = request.GET.dict()
-        vnp_secure_hash = input_data.pop('vnp_SecureHash', None)
+        if request.user.role != 'ADMIN':
+            return Response({"error": "Bạn không có quyền truy cập"}, status=403)
         
-        # Logic của Tân: 
-        # 1. Kiểm tra chữ ký (vnp_SecureHash) có khớp không.
-        # 2. Kiểm tra số tiền vnp_Amount có khớp với Booking không.
-        # 3. Nếu mọi thứ khớp và vnp_ResponseCode == '00' -> Trả về kết quả cho Khánh xử lý.
+        bookings = Booking.objects.all().order_by('-created_at')
+        from .serializers import BookingSerializer # Import local để tránh circular import nếu có
+        serializer = BookingSerializer(bookings, many=True)
+        return Response(serializer.data)
+
+class AdminApproveBookingView(APIView):
+    """
+    API Admin: Duyệt thanh toán cho đơn hàng VietQR - Ngày 16 (Khang)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.role != 'ADMIN':
+            return Response({"error": "Bạn không có quyền thực hiện"}, status=403)
         
-        return Response({"RspCode": "00", "Message": "Confirm Success"})
+        try:
+            booking = Booking.objects.get(id=pk)
+            booking.status = 'confirmed'
+            booking.save()
+            
+            # (Tùy chọn) Có thể tạo bản ghi Payment và Revenue ở đây giống VNPay Callback
+            
+            return Response({"message": f"Đã duyệt đơn hàng {pk} thành công!"})
+        except Booking.DoesNotExist:
+            return Response({"error": "Không tìm thấy đơn hàng"}, status=404)
+
+

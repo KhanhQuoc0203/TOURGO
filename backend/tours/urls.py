@@ -3,7 +3,8 @@ from .views import (
     TourCreateView, TourDetailAPIView, TourFilterView, 
     TourImageUploadView, BookingView, LocationListView,
     UserBookingListView, BookingDetailView,
-    PaymentLinkView, VNPayIPNView # <--- NHỚ IMPORT 2 VIEW NÀY
+    VietQRCreateView,
+    BookingConfirmPaymentView, AdminBookingListView, AdminApproveBookingView
 )
 
 urlpatterns = [
@@ -12,11 +13,14 @@ urlpatterns = [
     path('my-bookings/', UserBookingListView.as_view(), name='user-bookings'),
     path('bookings/<int:pk>/', BookingDetailView.as_view(), name='booking-detail'),
     
-    # URL tạo link sang VNPay (Cái Hà đang thiếu)
-    path('create-payment/', PaymentLinkView.as_view(), name='create-payment'),
+    # --- THÊM ROUTE THANH TOÁN ---
+    path('create-vietqr/', VietQRCreateView.as_view(), name='vietqr-create'),
     
-    # URL để VNPay gọi về báo kết quả (IPN)
-    path('vnpay-ipn/', VNPayIPNView.as_view(), name='vnpay-ipn'),
+    # --- MỚI: XÁC NHẬN & ADMIN DUYỆT ---
+    path('bookings/<int:pk>/confirm-payment/', BookingConfirmPaymentView.as_view(), name='booking-confirm-payment'),
+    path('admin/bookings/', AdminBookingListView.as_view(), name='admin-bookings'),
+    path('admin/bookings/<int:pk>/approve/', AdminApproveBookingView.as_view(), name='admin-approve'),
+
 
     # 2. Các API liên quan đến Tour
     path('locations/', LocationListView.as_view(), name='location-list'),
