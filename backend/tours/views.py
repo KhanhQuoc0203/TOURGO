@@ -13,7 +13,14 @@ from django.utils.decorators import method_decorator
 from datetime import date
 logger = logging.getLogger('app_logger')
 from django.conf import settings
+from .email_service import send_ticket_email
 
+# Thêm vào imports hiện có của tours/views.py day 16
+from django.utils import timezone
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 
 # CHỈ DÙNG MỘT CLASS NÀY CHO CẢ XEM DANH SÁCH VÀ TẠO TOUR
 class TourCreateView(generics.ListCreateAPIView):
@@ -319,6 +326,7 @@ class BookingConfirmPaymentView(APIView):
             booking = Booking.objects.get(id=pk, user=request.user)
             booking.status = 'confirmed'
             booking.save()
+            send_ticket_email(booking)
             return Response({"message": "Thông báo thành công, vui lòng chờ Admin duyệt"}, status=200)
         except Booking.DoesNotExist:
             return Response({"error": "Không tìm thấy đơn hàng"}, status=404)
@@ -360,3 +368,109 @@ class AdminApproveBookingView(APIView):
             return Response({"error": "Không tìm thấy đơn hàng"}, status=404)
 
 
+# backend/tours/views.py — thêm vào cuối file
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_status(request, booking_id):
+    """
+    API Polling: Kiểm tra trạng thái thanh toán theo thời gian thực.
+    
+    Frontend gọi API này mỗi 3-5 giây để cập nhật UI.
+    
+    GET /api/bookings/<booking_id>/payment-status/
+    
+    Response:
+    {
+        "booking_id": 42,
+        "booking_code": "TG000042",
+        "booking_status": "confirmed",
+        "payment_status": "SUCCESS",
+        "payment_method": "VNPay",
+        "amount": 5000000,
+        "amount_display": "5.000.000 VNĐ",
+        "paid_at": "2025-01-16T10:30:00Z",
+        "is_paid": true,
+        "poll_again": false       ← Frontend dựa vào field này để biết có cần poll tiếp không
+    }
+    """
+    try:
+        # Lấy booking — chỉ cho phép xem booking của chính mình
+        booking = Booking.objects.select_related('tour', 'user').get(
+            id=booking_id,
+            user=request.user
+        )
+    except Booking.DoesNotExist:
+        return Response(
+            {"error": "Không tìm thấy đơn hàng."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Lấy payment mới nhất liên quan đến booking
+    payment = None
+    payment_status_value = "PENDING"
+    payment_method = None
+    amount = None
+    paid_at = None
+
+    try:
+        payment = booking.payments.order_by('-created_at').first()
+        if payment:
+            payment_status_value = getattr(payment, 'status', 'PENDING')
+            payment_method = getattr(payment, 'payment_method', None)
+            amount = getattr(payment, 'amount', None)
+            paid_at = getattr(payment, 'updated_at', None) or getattr(payment, 'created_at', None)
+    except Exception:
+        pass
+
+    # Map payment method sang tên hiển thị
+    method_map = {
+        'vnpay': 'VNPay',
+        'momo': 'MoMo',
+        'cash': 'Tiền mặt',
+        'bank_transfer': 'Chuyển khoản',
+        'credit_card': 'Thẻ tín dụng',
+    }
+    payment_method_display = method_map.get(
+        (payment_method or '').lower(), payment_method or 'Online'
+    )
+
+    # Xác định trạng thái tổng thể
+    is_paid = (
+        payment_status_value in ['SUCCESS', 'success', 'COMPLETED', 'completed']
+        or booking.status in ['confirmed', 'paid', 'Đã thanh toán']
+    )
+
+    # poll_again = True nghĩa là frontend nên tiếp tục gọi API
+    # Dừng poll khi đã paid, failed, hoặc cancelled
+    terminal_statuses = [
+        'SUCCESS', 'success', 'COMPLETED', 'completed',
+        'FAILED', 'failed', 'CANCELLED', 'cancelled',
+        'confirmed', 'paid', 'Đã thanh toán', 'cancelled'
+    ]
+    poll_again = (
+        payment_status_value not in terminal_statuses
+        and booking.status not in terminal_statuses
+    )
+
+    # Format số tiền
+    def fmt_currency(val):
+        try:
+            return f"{int(val):,} VNĐ".replace(",", ".")
+        except (ValueError, TypeError):
+            return f"{val} VNĐ" if val else "N/A"
+
+    return Response({
+        "booking_id": booking.id,
+        "booking_code": f"TG{booking.id:06d}",
+        "booking_status": booking.status,
+        "payment_status": payment_status_value,
+        "payment_method": payment_method_display,
+        "amount": amount,
+        "amount_display": fmt_currency(amount or getattr(booking, 'total_price', None)),
+        "tour_name": booking.tour.title,
+        "paid_at": paid_at,
+        "is_paid": is_paid,
+        "poll_again": poll_again,
+        "checked_at": timezone.now(),   # Timestamp để debug
+    })

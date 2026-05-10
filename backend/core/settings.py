@@ -76,6 +76,8 @@ TEMPLATES = [
     },
 ]
 
+FRONTEND_URL = 'http://localhost:5173'  # production: 'https://tourgo.vn'
+
 WSGI_APPLICATION = 'core.wsgi.application'
 
 
@@ -207,6 +209,11 @@ LOGGING = {
             'filename': os.path.join(LOGS_DIR, 'debug.log'),
             'formatter': 'verbose',
         },
+        'console': {
+        'level': 'DEBUG',
+        'class': 'logging.StreamHandler',
+        'formatter': 'verbose',
+        },
     },
     'loggers': {
         'django': {
@@ -219,24 +226,43 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'tours.email_service': {
+        'handlers': ['file', 'console'],  # Thêm 'console' để in ra terminal
+        'level': 'DEBUG',
+        'propagate': False,
+        },
     },
 }
 
 # --- Email Settings for Gmail ---
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'nguyenvuhaaa123@gmail.com'
+# EMAIL_HOST_PASSWORD = 'xmek qfzc aimn pvak'
+# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+
+# Trong backend/core/settings.py, tạm thời thay dòng này:
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Thay vì smtp
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'nguyenvuhaaa123@gmail.com'
-EMAIL_HOST_PASSWORD = 'xmek qfzc aimn pvak'
+EMAIL_HOST_USER = 'tankhang1410@gmail.com'
+EMAIL_HOST_PASSWORD = 'rzoiobsgmsnokwbf'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_CREDENTIALS = True
 
 
+
+
 # --- VietQR Settings (Khang) ---
 VIETQR_BANK_ID = "MB" # Ví dụ: MB, VCB, ICB, ...
 VIETQR_ACCOUNT_NO = "0376706825" 
 VIETQR_ACCOUNT_NAME = "NGUYEN HUYNH NHAT TAN"
-
+

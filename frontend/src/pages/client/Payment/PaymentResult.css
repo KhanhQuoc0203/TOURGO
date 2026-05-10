@@ -133,3 +133,27 @@ h1 {
     25% { transform: translateX(-10px); }
     75% { transform: translateX(10px); }
 }
+
+
+/* --------DAY 16---------- */
+/* Spinner polling */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 16px;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Booking code display */
+.booking-code-display {
+    font-family: 'Courier New', monospace;
+    color: #667eea;
+    font-size: 16px;
+    letter-spacing: 2px;
+}
