@@ -44,8 +44,8 @@ export default function TourDetail() {
     });
 
     // --- Logic tính tổng tiền tạm tính ---
-    const totalPrice = bookingData.numPeople * (tour?.price || 0);
-
+    const totalPrice = (tour?.price || 0);
+    
     // --- Hàm xử lý gửi yêu cầu đặt tour ---
     const handleBookingSubmit = async () => {
         if (!bookingData.date) {
@@ -70,7 +70,7 @@ export default function TourDetail() {
             
         } catch (error) {
             console.error("Lỗi đặt tour:", error);
-            alert(error.response?.data?.error || "Có lỗi xảy ra, vui lòng đăng nhập trước khi đặt tour!");
+            alert(error.response?.data?.error || "Ngày khởi hành không hợp lệ");
         }
     };
 
@@ -232,10 +232,13 @@ export default function TourDetail() {
                                     onChange={(e) => setBookingData({...bookingData, numPeople: parseInt(e.target.value) || 1})} 
                                 />
                                 
-                                <div className="total-temp" style={{ marginBottom: '20px', padding: '10px', background: '#f9f9f9', borderRadius: '5px' }}>
-                                    <span style={{ fontSize: '14px' }}>Tổng tiền tạm tính:</span><br/>
-                                    <strong style={{ color: '#e67e22', fontSize: '18px' }}>{totalPrice.toLocaleString()} VNĐ</strong>
-                                </div>
+                               <div className="total-temp" style={{ marginBottom: '20px', padding: '10px', background: '#f9f9f9', borderRadius: '5px' }}>
+    <span style={{ fontSize: '14px' }}>Tổng tiền tạm tính:</span><br/>
+    <strong style={{ color: '#e67e22', fontSize: '18px' }}>
+        {/* Thêm 'vi-VN' vào trong toLocaleString() để ép định dạng dấu chấm của Việt Nam */}
+        {Number(totalPrice).toLocaleString('vi-VN')} VNĐ
+    </strong>
+</div>
                                 
                                 <button 
                                     onClick={handleBookingSubmit} 

@@ -9,6 +9,7 @@ const ToursPage = () => {
     const [search, setSearch] = useState('');
     const [startDate, setStartDate] = useState('');
     
+    // Giữ nguyên các state cũ để tránh lỗi tham chiếu nếu bạn có dùng ở đâu đó
     const [errors, setErrors] = useState({}); 
     const [numPeople, setNumPeople] = useState(1);
     const [bookingTourId, setBookingTourId] = useState(null); 
@@ -35,6 +36,7 @@ const ToursPage = () => {
         fetchTours();
     }, []);
 
+    // Giữ lại hàm này nhưng thực tế nút bấm mới sẽ không gọi tới nó nữa
     const handleBookingSubmit = async (tourId) => {
         setErrors({}); 
         try {
@@ -44,7 +46,6 @@ const ToursPage = () => {
                 return;
             }
 
-            // FIX 1: Ép kiểu numPeople sang số nguyên để Backend so sánh chính xác với slots
             const bookingData = {
                 tour: tourId,
                 number_of_people: parseInt(numPeople), 
@@ -57,12 +58,10 @@ const ToursPage = () => {
 
             alert("Đặt tour thành công!");
             setBookingTourId(null);
-            setNumPeople(1); // Reset lại số người về 1
+            setNumPeople(1); 
             fetchTours(); 
         } catch (err) {
             if (err.response && err.response.data) {
-                // FIX 2: Log lỗi ra console để Khánh kiểm tra cấu trúc JSON trả về
-                console.log("Lỗi từ Backend:", err.response.data);
                 setErrors(err.response.data);
             } else {
                 alert("Đã xảy ra lỗi không xác định!");
@@ -122,45 +121,16 @@ const ToursPage = () => {
                                         </button>
                                     </div>
 
+                                    {/* SỬA CHỖ NÀY: Nhấn vào là chuyển sang trang chi tiết luôn */}
                                     <button 
-                                        onClick={() => {
-                                            setBookingTourId(bookingTourId === tour.id ? null : tour.id);
-                                            setErrors({}); // Reset lỗi khi đóng/mở form
-                                        }}
+                                        onClick={() => navigate(`/tours/${tour.id}`)} 
                                         style={{ ...styles.button, marginTop: '10px', backgroundColor: '#34a853' }}
                                     >
-                                        {bookingTourId === tour.id ? "Đóng" : "Đặt Tour"}
+                                        Đặt Tour
                                     </button>
 
-                                    {bookingTourId === tour.id && (
-                                        <div style={styles.bookingBox}>
-                                            <label style={styles.label}>Số người:</label>
-                                            <input 
-                                                type="number" 
-                                                min="1" 
-                                                value={numPeople} 
-                                                onChange={(e) => setNumPeople(e.target.value)} 
-                                                style={{...styles.input, marginBottom: '5px'}}
-                                            />
-                                            {/* HIỂN THỊ LỖI THEO TỪNG TRƯỜNG HOẶC LỖI CHUNG (detail) */}
-                                            {errors.number_of_people && (
-                                                <div style={styles.errorText}>⚠️ {errors.number_of_people[0] || errors.number_of_people}</div>
-                                            )}
-                                            {errors.non_field_errors && (
-                                                <div style={styles.errorText}>⚠️ {errors.non_field_errors[0]}</div>
-                                            )}
-                                            {errors.detail && (
-                                                <div style={styles.errorText}>⚠️ {errors.detail}</div>
-                                            )}
-                                            
-                                            <button 
-                                                onClick={() => handleBookingSubmit(tour.id)}
-                                                style={{ ...styles.button, marginTop: '10px', padding: '8px' }}
-                                            >
-                                                Xác nhận đặt
-                                            </button>
-                                        </div>
-                                    )}
+                                    {/* Giữ lại phần bookingTourId && (...) phía dưới nếu bạn vẫn muốn dùng để test, 
+                                        nhưng hiện tại nút trên đã điều hướng đi rồi nên phần này sẽ không hiện ra nữa. */}
                                 </div>
                             </div>
                         ))

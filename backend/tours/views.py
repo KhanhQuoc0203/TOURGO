@@ -114,43 +114,40 @@ class BookingView(APIView):
             )
 
         try:
-            # 2. Lấy thông tin tour từ Database
+            # 2. Lấy thông tin tour từ Database để lấy giá gốc và kiểm tra slots
             tour = Tour.objects.get(id=tour_id)
             
-            # Ép kiểu số người sang số nguyên
             try:
                 num_people = int(num_people)
             except (ValueError, TypeError):
                 return Response({"error": "Số lượng người không hợp lệ!"}, status=400)
 
-            # --- 3. LOGIC VALIDATION CỦA TÂN: Kiểm tra ngày khởi hành ---
-            # Ngăn chặn đặt tour nếu ngày khởi hành đã qua hoặc là ngày hôm nay
+            # 3. Kiểm tra ngày khởi hành (Giữ nguyên logic của Tân)
             if tour.departure_date and tour.departure_date <= date.today():
-                logger.warning(f"User {request.user} định đặt tour đã quá hạn: {tour.title}")
                 return Response(
                     {"error": f"Không thể đặt tour này. Ngày khởi hành ({tour.departure_date}) phải sau ngày hiện tại!"}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # --- 4. LOGIC VALIDATION CỦA HÀ: Kiểm tra số chỗ trống ---
+            # 4. Kiểm tra số chỗ trống (Mỗi đơn hàng chỉ tính là 1 lượt đặt)
             if tour.slots <= 0:
-                return Response({"error": "Tour này hiện đã hết sạch chỗ!"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Tour này hiện đã hết lượt đặt!"}, status=status.HTTP_400_BAD_REQUEST)
 
-            if num_people > tour.slots:
-                return Response(
-                    {"number_of_people": [f"Tour này chỉ còn {tour.slots} chỗ trống!"]}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # --- 5. FIX LỖI TÍNH TIỀN & LƯU DỮ LIỆU ---
+            # Tạo bản sao dữ liệu để chỉnh sửa
+            data = request.data.copy()
+            
+            # ÉP GIÁ: Bất kể Frontend gửi gì, Backend chỉ lấy giá tour gốc để lưu vào total_price
+            data['total_price'] = tour.price 
 
-            # --- 5. LƯU DỮ LIỆU VÀ CẬP NHẬT DATABASE ---
-            # Truyền context={'request': request} để serializer lấy được user đang đăng nhập
-            serializer = BookingSerializer(data=request.data, context={'request': request})
+            # Truyền data đã ép giá vào Serializer
+            serializer = BookingSerializer(data=data, context={'request': request})
             
             if serializer.is_valid():
-                # Serializer.save() đã bao gồm logic trừ slots và tính total_price
+                # Khi gọi save(), hàm create trong Serializer sẽ thực hiện trừ 1 slot
                 booking = serializer.save() 
 
-                logger.info(f"Dat tour thanh cong: User {request.user} - Tour {tour.title}")
+                logger.info(f"Đặt tour thành công: User {request.user} - Tour {tour.title}")
                 return Response(
                     {"message": "Đặt tour thành công!", "id": booking.id}, 
                     status=status.HTTP_201_CREATED
@@ -159,8 +156,7 @@ class BookingView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Tour.DoesNotExist:
-            return Response({"error": "Không tìm thấy tour này trong hệ thống!"}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response({"error": "Không tìm thấy tour!"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.exception("Lỗi hệ thống khi đặt tour")
             return Response({"error": f"Lỗi hệ thống: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
