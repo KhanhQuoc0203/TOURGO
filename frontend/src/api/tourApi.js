@@ -65,3 +65,10 @@ const handleProcessPayment = async() => {
         alert("Không thể tạo liên kết thanh toán. Vui lòng thử lại!");
     }
 };
+
+// --- NGÀY 18: API ĐÁNH GIÁ TOUR (KHANG) ---
+export const addReview = async (tourId, data) => {
+    // data: { rating, content }
+    const response = await axiosClient.post(`tours/${tourId}/reviews/`, data);
+    return response.data;
+};

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTourById } from '../../../api/tourApi';
+import { getTourById, addReview } from '../../../api/tourApi';
 import axiosClient from '../../../api/axiosClient';
 import Navbar from '../../../components/layout/Navbar';
 import Swal from 'sweetalert2';
@@ -34,6 +34,11 @@ export default function TourDetail() {
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+    // --- State cho Review - Ngày 18 (Hà) ---
+    const [reviewContent, setReviewContent] = useState('');
+    const [rating, setRating] = useState(5);
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
     // --- State cho Booking: Chỉ giữ số người vì ngày lấy từ Tour ---
     const [bookingData, setBookingData] = useState({
@@ -92,6 +97,31 @@ export default function TourDetail() {
         });
     }
 };
+
+    // --- Hàm xử lý gửi đánh giá - Ngày 18 (Khang) ---
+    const handleReviewSubmit = async (e) => {
+        e.preventDefault();
+        if (!reviewContent.trim()) {
+            Swal.fire('Lỗi', 'Vui lòng nhập nội dung đánh giá', 'error');
+            return;
+        }
+
+        setIsSubmittingReview(true);
+        try {
+            await addReview(id, { content: reviewContent, rating });
+            Swal.fire('Thành công', 'Cảm ơn bạn đã đánh giá tour!', 'success');
+            setReviewContent('');
+            setRating(5);
+            // Tải lại dữ liệu tour để cập nhật danh sách đánh giá
+            const updatedTour = await getTourById(id);
+            setTour(updatedTour);
+        } catch (error) {
+            const msg = error.response?.data?.error || 'Không thể gửi đánh giá. Có thể bạn chưa đi tour này!';
+            Swal.fire('Thất bại', msg, 'error');
+        } finally {
+            setIsSubmittingReview(false);
+        }
+    };
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -174,6 +204,84 @@ export default function TourDetail() {
                                     <Marker position={[tour.latitude, tour.longitude]}><Popup>{tour.address}</Popup></Marker>
                                 </MapContainer>
                             )}
+                        </section>
+                        
+                        {/* PHẦN ĐÁNH GIÁ - Ngày 18 (Hà) */}
+                        <section className="tour-reviews-section" style={{ marginTop: '30px' }}>
+                            <h3 style={{ borderBottom: '2px solid #e67e22', display: 'inline-block', paddingBottom: '5px', marginBottom: '20px' }}>
+                                Đánh giá từ khách hàng ({tour.reviews?.length || 0})
+                            </h3>
+
+                            {/* Form gửi đánh giá */}
+                            <div className="review-form-card" style={{ background: '#fdfcfb', padding: '20px', borderRadius: '12px', border: '1px solid #eee', marginBottom: '30px' }}>
+                                <h4 style={{ marginBottom: '15px' }}>Để lại đánh giá của bạn</h4>
+                                <form onSubmit={handleReviewSubmit}>
+                                    <div style={{ marginBottom: '15px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px' }}>Xếp hạng:</label>
+                                        <div className="star-rating">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <span 
+                                                    key={star} 
+                                                    onClick={() => setRating(star)}
+                                                    style={{ 
+                                                        fontSize: '24px', 
+                                                        cursor: 'pointer', 
+                                                        color: star <= rating ? '#f1c40f' : '#ddd',
+                                                        marginRight: '5px'
+                                                    }}
+                                                >
+                                                    ★
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginBottom: '15px' }}>
+                                        <textarea 
+                                            placeholder="Chia sẻ trải nghiệm của bạn về tour này..."
+                                            style={{ width: '100%', minHeight: '100px', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
+                                            value={reviewContent}
+                                            onChange={(e) => setReviewContent(e.target.value)}
+                                        />
+                                    </div>
+                                    <button 
+                                        type="submit" 
+                                        disabled={isSubmittingReview}
+                                        style={{ 
+                                            background: '#2c3e50', 
+                                            color: 'white', 
+                                            padding: '10px 25px', 
+                                            borderRadius: '6px', 
+                                            border: 'none', 
+                                            cursor: 'pointer',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        {isSubmittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+                                    </button>
+                                </form>
+                            </div>
+
+                            {/* Danh sách đánh giá */}
+                            <div className="reviews-list">
+                                {tour.reviews && tour.reviews.length > 0 ? (
+                                    tour.reviews.map((rev) => (
+                                        <div key={rev.id} className="review-item" style={{ padding: '15px 0', borderBottom: '1px solid #eee' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <strong style={{ fontSize: '16px' }}>{rev.user_name}</strong>
+                                                <span style={{ color: '#95a5a6', fontSize: '13px' }}>
+                                                    {new Date(rev.created_at).toLocaleDateString('vi-VN')}
+                                                </span>
+                                            </div>
+                                            <div style={{ color: '#f1c40f', marginBottom: '8px' }}>
+                                                {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                                            </div>
+                                            <p style={{ color: '#34495e', lineHeight: '1.6' }}>{rev.content}</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p style={{ color: '#7f8c8d', fontStyle: 'italic' }}>Chưa có đánh giá nào cho tour này.</p>
+                                )}
+                            </div>
                         </section>
                     </main>
 

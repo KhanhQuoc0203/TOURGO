@@ -470,3 +470,51 @@ def payment_status(request, booking_id):
         "poll_again": poll_again,
         "checked_at": timezone.now(),   # Timestamp để debug
     })
+
+# --- PHẦN CỦA KHÁNH (NGÀY 18: ĐÁNH GIÁ TOUR) ---
+from .models import Review
+from .serializers import ReviewSerializer
+
+class ReviewCreateView(APIView):
+    """
+    API Gửi đánh giá tour - Ngày 18 (Khánh)
+    Điều kiện: Chỉ user đã đặt tour và được 'confirmed' mới được đánh giá.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, tour_id):
+        user = request.user
+        content = request.data.get('content')
+        rating = request.data.get('rating', 5)
+
+        if not content:
+            return Response({"error": "Nội dung đánh giá không được để trống"}, status=400)
+
+        # 1. Kiểm tra xem user đã đi tour này chưa (có booking confirmed)
+        has_booked = Booking.objects.filter(
+            user=user, 
+            tour_id=tour_id, 
+            status='confirmed'
+        ).exists()
+
+        if not has_booked:
+            return Response(
+                {"error": "Bạn chỉ có thể đánh giá những tour mà bạn đã đặt và thanh toán thành công!"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 2. Tạo đánh giá
+        try:
+            tour = Tour.objects.get(id=tour_id)
+            review = Review.objects.create(
+                user=user,
+                tour=tour,
+                content=content,
+                rating=rating
+            )
+            serializer = ReviewSerializer(review)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Tour.DoesNotExist:
+            return Response({"error": "Không tìm thấy tour!"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)

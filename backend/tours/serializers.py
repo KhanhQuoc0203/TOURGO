@@ -1,15 +1,24 @@
 from rest_framework import serializers
-from .models import Booking, Tour, TourImage
+from .models import Booking, Tour, TourImage, Review
 from datetime import date
 class TourImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = TourImage
         fields = ['id', 'image', 'created_at']
 
+class ReviewSerializer(serializers.ModelSerializer):
+    user_name = serializers.ReadOnlyField(source='user.username')
+
+    class Meta:
+        model = Review
+        fields = ['id', 'user', 'user_name', 'rating', 'content', 'created_at']
+        read_only_fields = ['user']
+
 class TourSerializer(serializers.ModelSerializer):
     creator_name = serializers.ReadOnlyField(source='creator.username')
     creator_phone = serializers.ReadOnlyField(source='creator.phone')
     tour_images = TourImageSerializer(many=True, read_only=True)
+    reviews = ReviewSerializer(many=True, read_only=True)
 
     class Meta:
         model = Tour

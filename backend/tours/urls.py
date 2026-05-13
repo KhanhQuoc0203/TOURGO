@@ -5,10 +5,13 @@ from .views import (
     UserBookingListView, BookingDetailView,
     VietQRCreateView,
     BookingConfirmPaymentView, AdminBookingListView, AdminApproveBookingView,
-    payment_status,
+    payment_status, ReviewCreateView
 )
 
 urlpatterns = [
+    # 3. API Đánh giá - Ngày 18 (Tân)
+    path('<int:tour_id>/reviews/', ReviewCreateView.as_view(), name='tour-reviews'),
+
     # 1. Các API liên quan đến Booking (Đặt tour & Thanh toán)
     path('book/', BookingView.as_view(), name='tour-book'),
     path('my-bookings/', UserBookingListView.as_view(), name='user-bookings'),

@@ -114,4 +114,22 @@ class Revenue(models.Model):
     def __str__(self):
         return f"Revenue from Payment {self.payment.id}"
 
+class Review(models.Model):
+    """
+    Model Đánh giá tour - Ngày 18 (Tân)
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    tour = models.ForeignKey(Tour, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.IntegerField(default=5) # 1-5 sao
+    content = models.TextField(verbose_name="Nội dung đánh giá")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.tour.title} - {self.rating} sao"
+
+    class Meta:
+        verbose_name = "Đánh giá"
+        verbose_name_plural = "Các đánh giá"
+        ordering = ['-created_at']
+
 
