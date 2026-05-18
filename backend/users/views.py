@@ -1,6 +1,6 @@
 from rest_framework import status, generics
 from rest_framework.response import Response
-from .serializers import RegisterSerializer, UserSerializer, ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer
+from .serializers import RegisterSerializer, UpdateProfileSerializer, UserSerializer, ForgotPasswordSerializer, VerifyOTPSerializer, ResetPasswordSerializer, ChangePasswordSerializer
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +9,7 @@ from .models import PasswordResetOTP, User
 from django.core.mail import send_mail
 import logging
 import random
+from rest_framework.parsers import MultiPartParser, FormParser
 
 logger = logging.getLogger('app_logger')
 
@@ -141,3 +142,47 @@ class MeView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def put(self, request):
+        """
+        Cập nhật profile user (phone, avatar)
+        """
+        serializer = UpdateProfileSerializer(
+            request.user, 
+            data=request.data, 
+            partial=True  # Allow partial update
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Cập nhật profile thành công!",
+                "user": UserSerializer(request.user).data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        """
+        Lấy thông tin profile hiện tại
+        """
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+    
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            if not user.check_password(serializer.validated_data['old_password']):
+                return Response(
+                    {"old_password": "Mật khẩu cũ không chính xác."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            return Response({"message": "Đổi mật khẩu thành công!"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

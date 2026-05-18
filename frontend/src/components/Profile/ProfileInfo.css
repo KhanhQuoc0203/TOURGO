@@ -1,36 +1,8 @@
-.profile-dashboard {
-  display: flex;
-  gap: 24px;
+.profile-info-card {
+  background: white;
   padding: 24px;
-  min-height: calc(100vh - 80px);
-  background: #f4f7f6;
-}
-
-.profile-sidebar {
-  width: 280px;
-  background: #ffffff;
-  border-radius: 18px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-  padding: 24px;
-}
-
-.profile-main {
-  flex: 1;
-}
-
-.loading {
-  text-align: center;
-  padding: 60px;
-  font-size: 1.2rem;
-}
-
-.profile-info-card,
-.booking-history-card,
-.change-password-card {
-  background: #ffffff;
-  padding: 24px;
-  border-radius: 18px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
 }
 
 .profile-header {
@@ -54,7 +26,6 @@
   padding: 6px 16px;
   border-radius: 999px;
   font-weight: 700;
-  font-size: 0.85rem;
 }
 
 .profile-details {
@@ -77,29 +48,19 @@
   gap: 16px;
 }
 
-.profile-update-form label {
-  font-weight: 700;
-  color: #333;
-}
-
 .profile-update-form input {
   width: 100%;
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid #d9e2ec;
-  outline: none;
-}
-
-.profile-update-form input:focus {
-  border-color: #48c78e;
 }
 
 .profile-update-form button {
   width: fit-content;
   padding: 12px 24px;
   background: #48c78e;
-  color: white;
   border: none;
+  color: white;
   border-radius: 14px;
   cursor: pointer;
   font-weight: 700;

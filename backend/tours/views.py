@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
 from .models import Tour, TourImage, Booking, Transaction, Payment, Revenue
-from .serializers import BookingSerializer, TourSerializer, TourImageSerializer, BookingDetailSerializer
+from .serializers import BookingSerializer, TourSerializer, TourImageSerializer, BookingDetailSerializer, BookingListSerializer
 from .permissions import IsAdminOrProvider
 import logging
 from rest_framework import permissions
@@ -213,18 +213,48 @@ class BookingCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save()
 
-# --- THÊM VIEW CHO NGÀY 13 (TÂN & KHÁNH) ---
 
-class UserBookingListView(generics.ListAPIView):
-    """
-    API lấy danh sách đơn hàng của chính người dùng đang đăng nhập
-    """
-    serializer_class = BookingDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        # Chỉ trả về các đơn hàng của user hiện tại, sắp xếp mới nhất lên đầu
-        return Booking.objects.filter(user=self.request.user).order_by('-created_at')
+# ------ DAY 19 -------------
+# PHẦN NAY UPDATE THÊM TỪ PHẦN NGÀY 13 CỦA TÂN & KHÁNH
+class UserBookingListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        GET /api/tours/my-bookings/
+        Return all bookings của user, phân loại theo category:
+        - upcoming: Sắp đi
+        - completed: Đã đi
+        - cancelled: Đã hủy
+        - pending: Chờ thanh toán
+        """
+        bookings = Booking.objects.filter(user=request.user).select_related('tour')
+        
+        # Tính category cho từng booking
+        from datetime import date
+        today = date.today()
+        
+        bookings_data = []
+        for booking in bookings:
+            serializer = BookingListSerializer(booking)
+            bookings_data.append(serializer.data)
+        
+        # Group by category
+        result = {
+            'upcoming': [],
+            'completed': [],
+            'cancelled': [],
+            'pending': []
+        }
+        
+        for booking_data in bookings_data:
+            category = booking_data.get('category', 'pending')
+            result[category].append(booking_data)
+        
+        return Response({
+            'message': f'Tổng {len(bookings)} booking',
+            'bookings': result
+        }, status=status.HTTP_200_OK)
 
 class BookingDetailView(APIView):
     """
@@ -517,4 +547,4 @@ class ReviewCreateView(APIView):
         except Tour.DoesNotExist:
             return Response({"error": "Không tìm thấy tour!"}, status=404)
         except Exception as e:
-            return Response({"error": str(e)}, status=400)
+            return Response({"error": str(e)}, status=400)

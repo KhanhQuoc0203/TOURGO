@@ -39,11 +39,11 @@ export const uploadTourImages = async(tourId, files) => {
 
 // --- THÊM HÀM CHO NGÀY 13 (HÀ & KHANG) ---
 
-// Lấy danh sách đơn hàng của người dùng đang đăng nhập
-export const getMyBookings = async() => {
-    const response = await axiosClient.get('tours/my-bookings/');
-    return response.data;
-};
+// // Lấy danh sách đơn hàng của người dùng đang đăng nhập
+// export const getMyBookings = async() => {
+//     const response = await axiosClient.get('tours/my-bookings/');
+//     return response.data;
+// };
 
 // Hủy đơn hàng dựa trên ID
 export const cancelBooking = async(id) => {
@@ -71,4 +71,30 @@ export const addReview = async (tourId, data) => {
     // data: { rating, content }
     const response = await axiosClient.post(`tours/${tourId}/reviews/`, data);
     return response.data;
+};
+
+export const getMyBookings = async () => {
+  const response = await axiosClient.get('tours/my-bookings/');
+  return response.data;
+};
+
+export const updateProfile = async (data) => {
+  const response = await axiosClient.put('users/profile/', data);
+  return response.data;
+};
+
+export const changePassword = async (data) => {
+  const response = await axiosClient.post('users/change-password/', data);
+  return response.data;
+};
+
+export const getMyBookingsFlat = async () => {
+  const response = await axiosClient.get('tours/my-bookings/');
+  const bookings = response.data.bookings;
+  return [
+    ...bookings.upcoming,
+    ...bookings.completed,
+    ...bookings.cancelled,
+    ...bookings.pending
+  ];
 };

@@ -67,4 +67,44 @@ class ResetPasswordSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'phone', 'role', 'is_staff')
+        fields = ('id', 'username', 'email', 'phone', 'avatar', 'role', 'is_staff')
+
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(
+        required=False, allow_blank=True,
+        error_messages={
+            'unique': 'Số điện thoại này đã được đăng ký. Vui lòng dùng số khác.'
+        }
+    )
+    avatar = serializers.URLField(required=False, allow_blank=True)
+    
+    class Meta:
+        model = User
+        fields = ('phone', 'avatar', 'email')  # email read-only cho xem thôi
+        read_only_fields = ['email']
+    
+    def validate_phone(self, value):
+        if value:  # Chỉ validate nếu có giá trị
+            user = self.instance
+            if User.objects.filter(phone=value).exclude(id=user.id).exists():
+                raise serializers.ValidationError("Số điện thoại này đã được đăng ký!")
+        return value
+    
+    def update(self, instance, validated_data):
+        instance.phone = validated_data.get('phone', instance.phone)
+        instance.avatar = validated_data.get('avatar', instance.avatar)
+        instance.save()
+        return instance
+    
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({
+                'confirm_password': 'Mật khẩu mới và xác nhận không khớp.'
+            })
+        return data

@@ -81,6 +81,49 @@ class BookingSerializer(serializers.ModelSerializer):
         booking = super().create(validated_data)
         
         return booking
+    
+# ---------- DAY 19 -----------
+class BookingListSerializer(serializers.ModelSerializer):
+    tour_title = serializers.CharField(source='tour.title', read_only=True)
+    tour_address = serializers.CharField(source='tour.address', read_only=True)
+    tour_image = serializers.URLField(source='tour.image_url', read_only=True)
+    tour_departure_date = serializers.DateField(source='tour.departure_date', read_only=True)
+    tour_price = serializers.DecimalField(
+        source='tour.price',
+        max_digits=12,
+        decimal_places=2,
+        read_only=True
+    )
+    status_display = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Booking
+        fields = (
+            'id', 'tour_id', 'tour_title', 'tour_address', 'tour_image',
+            'tour_departure_date', 'number_of_people', 'total_price',
+            'tour_price', 'status', 'status_display', 'category', 'booking_date', 'created_at'
+        )
+
+    def get_status_display(self, obj):
+        status_map = {
+            'pending': 'Chờ thanh toán',
+            'confirmed': 'Đã xác nhận',
+            'cancelled': 'Đã hủy'
+        }
+        return status_map.get(obj.status, obj.status)
+
+    def get_category(self, obj):
+        from datetime import date
+        today = date.today()
+
+        if obj.status == 'cancelled':
+            return 'cancelled'
+        elif obj.tour.departure_date and obj.tour.departure_date > today and obj.status == 'confirmed':
+            return 'upcoming'
+        elif obj.tour.departure_date and obj.tour.departure_date <= today and obj.status == 'confirmed':
+            return 'completed'
+        return 'pending'
 
 # --- THÊM SERIALIZER CHO NGÀY 13 (TÂN) ---
 class BookingDetailSerializer(serializers.ModelSerializer):
@@ -90,3 +133,4 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         model = Booking
         fields = '__all__'
         read_only_fields = ['user', 'total_price', 'status']
+

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getMyBookings, cancelBooking } from '../../../api/tourApi';
+import { getMyBookingsFlat, cancelBooking } from '../../../api/tourApi';
 import Navbar from '../../../components/layout/Navbar';
 import './MyOrders.css';
 
@@ -9,7 +9,7 @@ export default function MyOrders() {
 
     const fetchBookings = async () => {
         try {
-            const data = await getMyBookings();
+            const data = await getMyBookingsFlat();
             setBookings(data);
         } catch (error) {
             console.error("Lỗi lấy danh sách đơn hàng:", error);
