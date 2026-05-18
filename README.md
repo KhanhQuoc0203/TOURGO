@@ -24,10 +24,14 @@ python manage.py makemigrations
 
 python manage.py migrate
 
-Link xem kinh độ, vĩ độ location:
+Trang xem kinh độ, vĩ độ location:
 
 - http://127.0.0.1:8000/api/tours/locations/
 
 Admin:
 
 - http://127.0.0.1:8000/admin/tours/tour/2/change/
+
+Trang review:
+
+- http://localhost:5173/my-reviews

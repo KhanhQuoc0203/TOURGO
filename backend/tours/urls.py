@@ -5,7 +5,7 @@ from .views import (
     UserBookingListView, BookingDetailView,
     VietQRCreateView,
     BookingConfirmPaymentView, AdminBookingListView, AdminApproveBookingView,
-    payment_status, ReviewCreateView
+    payment_status, ReviewCreateView, UserReviewListView, UserReviewDetailView
 )
 
 urlpatterns = [
@@ -32,7 +32,10 @@ urlpatterns = [
     path('<int:pk>/', TourDetailAPIView.as_view(), name='tour-detail'),
     path('<int:tour_id>/upload-images/', TourImageUploadView.as_view(), name='tour-upload-images'),
     path('bookings/<int:booking_id>/payment-status/', payment_status, name='payment-status'),
+    path('reviews/me/', UserReviewListView.as_view(), name='my-reviews'),
+    path('reviews/me/<int:pk>/', UserReviewDetailView.as_view(), name='my-review-detail'),
     
+
     # Để dòng này dưới cùng để không bị tranh chấp URL
     path('', TourCreateView.as_view(), name='tour-create'), 
 ]
