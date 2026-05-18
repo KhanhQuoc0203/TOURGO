@@ -8,7 +8,7 @@ class TourImageSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source='user.username')
-
+    
     class Meta:
         model = Review
         fields = ['id', 'user', 'user_name', 'rating', 'content', 'created_at']

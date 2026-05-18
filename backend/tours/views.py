@@ -33,7 +33,12 @@ class TourCreateView(generics.ListCreateAPIView):
         return [permissions.AllowAny()]
 
     def get_queryset(self):
-        queryset = Tour.objects.all()
+        # [NGÀY 20 - KHÁNH]: Tối ưu N+1 query
+        queryset = Tour.objects.select_related('creator').prefetch_related(
+            'tour_images', 
+            'reviews',
+            'reviews__user'
+        ).all()
         
         query = self.request.query_params.get('search')
         min_p = self.request.query_params.get('min_price')
@@ -72,7 +77,11 @@ class TourFilterView(APIView):
         max_p = request.query_params.get('max_price')
         d_date = request.query_params.get('departure_date')
 
-        tours = Tour.objects.all()
+        tours = Tour.objects.select_related('creator').prefetch_related(
+            'tour_images', 
+            'reviews',
+            'reviews__user'
+        ).all()
 
         if query:
             tours = tours.filter(Q(title__icontains=query) | Q(address__icontains=query))
@@ -92,7 +101,12 @@ class TourDetailAPIView(APIView):
     
     def get(self, request, pk):
         try:
-            tour = Tour.objects.get(pk=pk)
+            # [NGÀY 20 - KHÁNH]: Tối ưu N+1 query
+            tour = Tour.objects.select_related('creator').prefetch_related(
+                'tour_images', 
+                'reviews',
+                'reviews__user'
+            ).get(pk=pk)
             return Response(TourSerializer(tour, context={'request': request}).data)
         except Tour.DoesNotExist:
             return Response({"error": "Không tìm thấy!"}, status=404)
@@ -548,3 +562,33 @@ class ReviewCreateView(APIView):
             return Response({"error": "Không tìm thấy tour!"}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
+
+# --- PHẦN CỦA TÂN (NGÀY 20: QUẢN LÝ ĐÁNH GIÁ CÁ NHÂN) ---
+from rest_framework import generics
+from .models import Review
+from .serializers import ReviewSerializer
+from rest_framework.permissions import IsAuthenticated
+
+class UserReviewListView(generics.ListAPIView):
+    """
+    GET /api/tours/reviews/me/
+    Lấy danh sách các đánh giá do chính user đang đăng nhập viết.
+    """
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Lọc ra đánh giá của user hiện tại, sắp xếp bài mới nhất lên đầu
+        return Review.objects.filter(user=self.request.user).order_by('-created_at')
+
+class UserReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET, PUT, PATCH, DELETE /api/tours/reviews/me/<id>/
+    Xem chi tiết, Sửa, Xóa một đánh giá cụ thể của chính user đó.
+    """
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Bảo mật: Chỉ cho phép truy vấn và thao tác trên review do chính user này tạo
+        return Review.objects.filter(user=self.request.user)
