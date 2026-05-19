@@ -98,3 +98,14 @@ export const getMyBookingsFlat = async () => {
     ...bookings.pending
   ];
 };
+
+// --- NGÀY 21: PROVIDER CREATOR API ---
+export const getProviderTours = async () => {
+  const response = await axiosClient.get('tours/provider/tours/');
+  return response.data;
+};
+
+export const createProviderTour = async (data) => {
+  const response = await axiosClient.post('tours/provider/tours/', data);
+  return response.data;
+};
