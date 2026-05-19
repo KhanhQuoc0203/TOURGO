@@ -6,12 +6,14 @@ from .views import (
     VietQRCreateView,
     BookingConfirmPaymentView, AdminBookingListView, AdminApproveBookingView,
     payment_status, ReviewCreateView, UserReviewListView, UserReviewDetailView,
-    ProviderTourView
+    ProviderTourView, ProviderTourDetailView, TourImageDeleteView
 )
 
 urlpatterns = [
-    # 0. API dành cho Nhà cung cấp (Provider) - Ngày 21
+    # 0. API dành cho Nhà cung cấp (Provider) - Ngày 21 & 22
     path('provider/tours/', ProviderTourView.as_view(), name='provider-tour-list-create'),
+    path('provider/tours/<int:pk>/', ProviderTourDetailView.as_view(), name='provider-tour-detail'),
+    path('provider/tours/images/<int:pk>/', TourImageDeleteView.as_view(), name='provider-tour-image-delete'),
 
     # 3. API Đánh giá - Ngày 18 (Tân)
     path('<int:tour_id>/reviews/', ReviewCreateView.as_view(), name='tour-reviews'),
