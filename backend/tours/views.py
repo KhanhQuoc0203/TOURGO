@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 from .models import Tour, TourImage, Booking, Transaction, Payment, Revenue
 from .serializers import BookingSerializer, TourSerializer, TourImageSerializer, BookingDetailSerializer, BookingListSerializer
-from .permissions import IsAdminOrProvider
+from .permissions import IsAdminOrProvider, IsProvider
 import logging
 from rest_framework import permissions
 from django.views.decorators.csrf import csrf_exempt
@@ -21,6 +21,21 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+
+class ProviderTourView(generics.ListCreateAPIView):
+    serializer_class = TourSerializer
+    permission_classes = [IsProvider]
+
+    def get_queryset(self):
+        # [NGÀY 20 - KHÁNH]: Tối ưu N+1 query và lọc theo người tạo (Provider)
+        return Tour.objects.filter(creator=self.request.user).select_related('creator').prefetch_related(
+            'tour_images', 
+            'reviews',
+            'reviews__user'
+        ).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(creator=self.request.user)
 
 # CHỈ DÙNG MỘT CLASS NÀY CHO CẢ XEM DANH SÁCH VÀ TẠO TOUR
 class TourCreateView(generics.ListCreateAPIView):

@@ -14,6 +14,7 @@ export default function Header() {
 
   const token = localStorage.getItem('access_token');
   const username = localStorage.getItem('username');
+  const role = localStorage.getItem('role');
 
   // Hàm để kiểm tra xem link có đang active hay không
   const isActive = (path) => location.pathname === path;
@@ -52,6 +53,11 @@ export default function Header() {
           <li className={isActive('/contact') ? 'active' : ''}>
             <Link to="/contact">Liên Hệ</Link>
           </li>
+          {(role === 'PROVIDER' || role === 'ADMIN') && (
+            <li className={isActive('/provider/dashboard') ? 'active' : ''}>
+              <Link to="/provider/dashboard" style={{ color: '#fff', fontWeight: 'bold' }}>Kênh Nhà Cung Cấp</Link>
+            </li>
+          )}
         </ul>
 
         <div className="navbar-actions">
