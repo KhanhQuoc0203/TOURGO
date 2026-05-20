@@ -37,6 +37,13 @@ class ProviderTourView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
 
+class ProviderTourDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = TourSerializer
+    permission_classes = [IsProvider]
+
+    def get_queryset(self):
+        return Tour.objects.filter(creator=self.request.user)
+
 # CHỈ DÙNG MỘT CLASS NÀY CHO CẢ XEM DANH SÁCH VÀ TẠO TOUR
 class TourCreateView(generics.ListCreateAPIView):
     queryset = Tour.objects.all()
@@ -212,6 +219,19 @@ class TourImageUploadView(APIView):
             }, status=status.HTTP_201_CREATED)
         except Tour.DoesNotExist:
             return Response({"error": "Không tìm thấy tour!"}, status=status.HTTP_404_NOT_FOUND)
+
+class TourImageDeleteView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Cho phép người tạo (provider) hoặc admin xoá ảnh
+        if self.request.user.is_staff:
+            return TourImage.objects.all()
+        return TourImage.objects.filter(tour__creator=self.request.user)
+
+    def perform_destroy(self, instance):
+        # Optional: delete file from storage if needed, but let's just delete the object
+        instance.delete()
 
 
 class LocationListView(APIView):

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getProviderTours, createProviderTour, uploadTourImages } from '../../api/tourApi';
+import { Link } from 'react-router-dom';
+import { getProviderTours, createProviderTour, uploadTourImages, updateProviderTour, deleteProviderTour, deleteTourImage } from '../../api/tourApi';
 import './ProviderDashboard.css';
 
 export default function ProviderDashboard() {
@@ -7,6 +8,10 @@ export default function ProviderDashboard() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [currentTourId, setCurrentTourId] = useState(null);
+  const [showImageManager, setShowImageManager] = useState(false);
+  const [selectedTour, setSelectedTour] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -63,40 +68,52 @@ export default function ProviderDashboard() {
     setMessage({ type: '', text: '' });
 
     try {
-      // 1. Tạo tour mới thông qua API POST của Khánh
-      const newTour = await createProviderTour({
-        title: formData.title,
-        address: formData.address,
-        price: parseFloat(formData.price),
-        departure_date: formData.departure_date,
-        slots: parseInt(formData.slots),
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        description: formData.description,
-        image_url: formData.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
-      });
+      if (editMode) {
+        await updateProviderTour(currentTourId, {
+          title: formData.title,
+          address: formData.address,
+          price: parseFloat(formData.price),
+          departure_date: formData.departure_date,
+          slots: parseInt(formData.slots),
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          description: formData.description,
+          image_url: formData.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
+        });
+        
+        if (selectedFiles.length > 0) {
+          await uploadTourImages(currentTourId, selectedFiles);
+        }
+        
+        setMessage({ type: 'success', text: 'Cập nhật tour thành công.' });
+      } else {
+        // 1. Tạo tour mới thông qua API POST của Khánh
+        const newTour = await createProviderTour({
+          title: formData.title,
+          address: formData.address,
+          price: parseFloat(formData.price),
+          departure_date: formData.departure_date,
+          slots: parseInt(formData.slots),
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          description: formData.description,
+          image_url: formData.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
+        });
 
-      const newTourId = newTour.id;
+        const newTourId = newTour.id;
 
-      // 2. Nếu có chọn thêm ảnh album, thực hiện upload lên backend (Khang)
-      if (selectedFiles.length > 0) {
-        await uploadTourImages(newTourId, selectedFiles);
+        // 2. Nếu có chọn thêm ảnh album, thực hiện upload lên backend (Khang)
+        if (selectedFiles.length > 0) {
+          await uploadTourImages(newTourId, selectedFiles);
+        }
+
+        // Success
+        setMessage({ type: 'success', text: 'Chúc mừng! Bạn đã đăng ký và tạo tour du lịch mới thành công.' });
       }
-
-      // Success
-      setMessage({ type: 'success', text: 'Chúc mừng! Bạn đã đăng ký và tạo tour du lịch mới thành công.' });
 
       // Reset Form
       setFormData({
-        title: '',
-        address: '',
-        price: '',
-        departure_date: '',
-        slots: '',
-        latitude: '',
-        longitude: '',
-        description: '',
-        image_url: ''
+        title: '', address: '', price: '', departure_date: '', slots: '', latitude: '', longitude: '', description: '', image_url: ''
       });
       setSelectedFiles([]);
       setFilePreviews([]);
@@ -125,6 +142,71 @@ export default function ProviderDashboard() {
       setSubmitting(false);
     }
   };
+
+  const openEditModal = (tour) => {
+    setEditMode(true);
+    setCurrentTourId(tour.id);
+    setFormData({
+      title: tour.title || '',
+      address: tour.address || '',
+      price: tour.price || '',
+      departure_date: tour.departure_date || '',
+      slots: tour.slots || '',
+      latitude: tour.latitude || '',
+      longitude: tour.longitude || '',
+      description: tour.description || '',
+      image_url: tour.image_url || ''
+    });
+    setSelectedFiles([]);
+    setFilePreviews([]);
+    setShowCreateModal(true);
+  };
+
+  const handleDeleteTour = async (id) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa tour này không? Mọi dữ liệu liên quan sẽ bị xóa.")) {
+      try {
+        await deleteProviderTour(id);
+        setMessage({ type: 'success', text: 'Đã xóa tour thành công.' });
+        fetchTours();
+      } catch (error) {
+        setMessage({ type: 'error', text: 'Lỗi khi xóa tour.' });
+      }
+    }
+  };
+
+  const openImageManager = (tour) => {
+    setSelectedTour(tour);
+    setShowImageManager(true);
+  };
+
+  const handleDeleteImage = async (imageId) => {
+    if (window.confirm("Xóa ảnh này khỏi album?")) {
+      try {
+        await deleteTourImage(imageId);
+        fetchTours();
+        setSelectedTour(prev => ({
+          ...prev,
+          tour_images: prev.tour_images.filter(img => img.id !== imageId)
+        }));
+      } catch (error) {
+        alert("Lỗi khi xóa ảnh!");
+      }
+    }
+  };
+
+  const handleAddMoreImages = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    try {
+      await uploadTourImages(selectedTour.id, files);
+      fetchTours();
+      setShowImageManager(false);
+      setMessage({ type: 'success', text: 'Đã thêm ảnh thành công.' });
+    } catch (error) {
+      alert("Lỗi khi thêm ảnh");
+    }
+  };
+
   // Helper to get first uploaded album image or main image_url, avoiding default beach placeholder
   const getTourDisplayImage = (tour) => {
     if (tour.tour_images && tour.tour_images.length > 0) {
@@ -155,7 +237,16 @@ export default function ProviderDashboard() {
           <h1 className="dashboard-title">Kênh Nhà Cung Cấp</h1>
           <p className="dashboard-subtitle">Quản lý và đăng tải các tour du lịch độc quyền của bạn</p>
         </div>
-        <button className="btn-add-tour" onClick={() => setShowCreateModal(true)}>
+        <button className="btn-add-tour" onClick={() => {
+          setEditMode(false);
+          setCurrentTourId(null);
+          setFormData({
+            title: '', address: '', price: '', departure_date: '', slots: '', latitude: '', longitude: '', description: '', image_url: ''
+          });
+          setSelectedFiles([]);
+          setFilePreviews([]);
+          setShowCreateModal(true);
+        }}>
           <span className="plus-icon">+</span> Đăng Tour Mới
         </button>
       </div>
@@ -202,29 +293,39 @@ export default function ProviderDashboard() {
         <div className="tours-grid">
           {tours.map(tour => (
             <div key={tour.id} className="provider-tour-card">
-              <div className="tour-card-image-wrapper">
-                <img
-                  src={getTourDisplayImage(tour)}
-                  alt={tour.title}
-                  className="tour-card-image"
-                />
-                <span className="tour-card-price-badge">{formatPrice(tour.price)}</span>
-              </div>
-              <div className="tour-card-body">
-                <h3 className="tour-card-title">{tour.title}</h3>
-                <div className="tour-card-details">
-                  <p><strong>📍 Địa điểm:</strong> {tour.address}</p>
-                  <p><strong>📅 Ngày đi:</strong> {tour.departure_date}</p>
-                  <p><strong>🎟️ Còn trống:</strong> {tour.slots} chỗ</p>
-                  {tour.latitude && tour.longitude && (
-                    <p className="coordinates-tag">📌 Tọa độ: {tour.latitude}, {tour.longitude}</p>
-                  )}
+              <Link to={`/tours/${tour.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                <div className="tour-card-image-wrapper">
+                  <img
+                    src={getTourDisplayImage(tour)}
+                    alt={tour.title}
+                    className="tour-card-image"
+                  />
+                  <span className="tour-card-price-badge">{formatPrice(tour.price)}</span>
                 </div>
-                <div className="tour-card-footer">
-                  <span className="status-badge active">Đang hoạt động</span>
-                  {tour.tour_images && tour.tour_images.length > 0 && (
-                    <span className="images-count-badge">📸 {tour.tour_images.length} ảnh</span>
-                  )}
+                <div className="tour-card-body" style={{ paddingBottom: '0px' }}>
+                  <h3 className="tour-card-title">{tour.title}</h3>
+                  <div className="tour-card-details">
+                    <p><strong>📍 Địa điểm:</strong> {tour.address}</p>
+                    <p><strong>📅 Ngày đi:</strong> {tour.departure_date}</p>
+                    <p><strong>🎟️ Còn trống:</strong> {tour.slots} chỗ</p>
+                    {tour.latitude && tour.longitude && (
+                      <p className="coordinates-tag">📌 Tọa độ: {tour.latitude}, {tour.longitude}</p>
+                    )}
+                  </div>
+                  <div className="tour-card-footer">
+                    <span className="status-badge active">Đang hoạt động</span>
+                    {tour.tour_images && tour.tour_images.length > 0 && (
+                      <span className="images-count-badge">📸 {tour.tour_images.length} ảnh</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+              <div className="tour-card-body" style={{ paddingTop: '5px' }}>
+                {/* NEW ACTION BUTTONS */}
+                <div className="tour-card-actions" style={{ display: 'flex', gap: '8px', marginTop: '15px' }}>
+                  <button onClick={() => openEditModal(tour)} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#f39c12', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>Sửa</button>
+                  <button onClick={() => openImageManager(tour)} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#3498db', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>Ảnh</button>
+                  <button onClick={() => handleDeleteTour(tour.id)} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#e74c3c', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>Xóa</button>
                 </div>
               </div>
             </div>
@@ -237,7 +338,7 @@ export default function ProviderDashboard() {
         <div className="modal-backdrop">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>ĐĂNG TOUR DU LỊCH MỚI</h2>
+              <h2>{editMode ? 'CHỈNH SỬA TOUR' : 'ĐĂNG TOUR DU LỊCH MỚI'}</h2>
               <button className="btn-close-modal" onClick={() => {
                 setShowCreateModal(false);
                 setSelectedFiles([]);
@@ -403,10 +504,54 @@ export default function ProviderDashboard() {
                   Hủy
                 </button>
                 <button type="submit" className="btn-submit" disabled={submitting}>
-                  {submitting ? 'Đang gửi dữ liệu...' : ' Phát Hành Tour Ngay'}
+                  {submitting ? 'Đang gửi dữ liệu...' : (editMode ? 'Cập Nhật' : ' Phát Hành Tour Ngay')}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* IMAGE MANAGER MODAL */}
+      {showImageManager && selectedTour && (
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h2>QUẢN LÝ ALBUM ẢNH</h2>
+              <button className="btn-close-modal" onClick={() => setShowImageManager(false)}>×</button>
+            </div>
+            
+            <div className="image-manager-body" style={{ padding: '20px' }}>
+              <div className="current-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                {selectedTour.tour_images && selectedTour.tour_images.length > 0 ? (
+                  selectedTour.tour_images.map(img => {
+                    const imgUrl = (img.image.startsWith('http://') || img.image.startsWith('https://')) ? img.image : `http://127.0.0.1:8000${img.image}`;
+                    return (
+                      <div key={img.id} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                        <img src={imgUrl} alt="tour" style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }} />
+                        <button 
+                          onClick={() => handleDeleteImage(img.id)}
+                          style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(231, 76, 60, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+                          title="Xóa ảnh này"
+                        >×</button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#7f8c8d' }}>Chưa có ảnh nào trong album.</p>
+                )}
+              </div>
+              
+              <div className="add-more-images" style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>Thêm ảnh mới:</h4>
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleAddMoreImages}
+                  style={{ display: 'block', width: '100%', padding: '10px', border: '2px dashed #bdc3c7', borderRadius: '8px', cursor: 'pointer' }} 
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -108,4 +108,20 @@ export const getProviderTours = async () => {
 export const createProviderTour = async (data) => {
   const response = await axiosClient.post('tours/provider/tours/', data);
   return response.data;
+};
+
+// --- NGÀY 22: PROVIDER EDIT/DELETE & IMAGE MANAGEMENT ---
+export const updateProviderTour = async (id, data) => {
+  const response = await axiosClient.put(`tours/provider/tours/${id}/`, data);
+  return response.data;
+};
+
+export const deleteProviderTour = async (id) => {
+  const response = await axiosClient.delete(`tours/provider/tours/${id}/`);
+  return response.data;
+};
+
+export const deleteTourImage = async (imageId) => {
+  const response = await axiosClient.delete(`tours/provider/tours/images/${imageId}/`);
+  return response.data;
 };
