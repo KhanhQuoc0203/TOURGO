@@ -35,3 +35,5 @@ Admin:
 Trang review:
 
 - http://localhost:5173/my-reviews
+
+npm install recharts 

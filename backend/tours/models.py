@@ -64,6 +64,9 @@ class Booking(models.Model):
     class Meta:
         verbose_name = "Đơn đặt tour"
         verbose_name_plural = "Các đơn đặt tour"
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+        ]
 
 # --- PHẦN CỦA TÂN VÀ KHANG (NGÀY 14 & 15: THANH TOÁN VNPAY) ---
 
@@ -132,4 +135,4 @@ class Review(models.Model):
         verbose_name_plural = "Các đánh giá"
         ordering = ['-created_at']
 
-
+

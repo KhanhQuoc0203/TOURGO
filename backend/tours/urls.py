@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
-    TourCreateView, TourDetailAPIView, TourFilterView, 
-    TourImageUploadView, BookingView, LocationListView,
+    ProviderCustomerListView, ProviderRevenueReportView, TourCreateView, TourDetailAPIView, TourFilterView, 
+    TourImageUploadView, BookingView, LocationListView, UpdateTourStatusView,
     UserBookingListView, BookingDetailView,
     VietQRCreateView,
     BookingConfirmPaymentView, AdminBookingListView, AdminApproveBookingView,
@@ -44,4 +44,8 @@ urlpatterns = [
 
     # Để dòng này dưới cùng để không bị tranh chấp URL
     path('', TourCreateView.as_view(), name='tour-create'), 
+    
+    path('provider/customers/', ProviderCustomerListView.as_view(), name='provider-customers'),
+    path('provider/tours/<int:tour_id>/update-status/', UpdateTourStatusView.as_view(), name='update-tour-status'),
+    path('provider/revenue-report/', ProviderRevenueReportView.as_view(), name='provider-revenue-report'),
 ]
