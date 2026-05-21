@@ -12,8 +12,9 @@ class TourImageInline(admin.TabularInline):
 
 @admin.register(Tour)
 class TourAdmin(admin.ModelAdmin):
-    list_display = ('title', 'price', 'slots', 'creator', 'created_at')
-    list_filter = ('created_at', 'creator')
+    list_display = ('title', 'price', 'slots', 'status', 'creator', 'created_at')
+    list_filter = ('status', 'created_at', 'creator')
+    list_editable = ('status',)
     search_fields = ('title', 'description')
     inlines = [TourImageInline]
 
@@ -33,3 +34,8 @@ class BookingAdmin(admin.ModelAdmin):
     def approve_payment(self, request, queryset):
         queryset.update(status='paid')
         self.message_user(request, "Đã duyệt thanh toán thành công!")
+@admin.action(description='Xác nhận đã thanh toán các đơn chọn')
+def approve_payment(self, request, queryset):
+    # Cập nhật thành 'confirmed' thay vì 'paid'
+    updated_count = queryset.update(status='confirmed')
+    self.message_user(request, f"Đã xác nhận thành công {updated_count} đơn hàng!")

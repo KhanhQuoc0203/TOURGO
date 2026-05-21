@@ -17,11 +17,13 @@ import Contact from './pages/client/Contact/Contact';
 import MyReviews from './pages/client/MyReviews';
 import ProviderDashboard from './pages/provider/ProviderDashboard';
 import ProviderCustomers from './pages/provider/ProviderCustomers';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
 function AppContent() {
   const location = useLocation();
   // Ẩn Navbar trên trang đăng nhập, đăng ký và quên mật khẩu
   const hideNavbar = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+
   return (
     <>
       {!hideNavbar && <Header />}
@@ -31,10 +33,7 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/introduce" element={<Introduce />} />
-
-        {/* --- THÊM ROUTE NÀY --- */}
         <Route path="/tours" element={<ToursPage />} />
-
         <Route path="/tours/:id" element={<TourDetail />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/search" element={<SearchResult />} />
@@ -45,6 +44,7 @@ function AppContent() {
         <Route path="/my-reviews" element={<MyReviews />} />
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
         <Route path="/provider/customers" element={<ProviderCustomers />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>
     </>
   );

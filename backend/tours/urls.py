@@ -6,7 +6,7 @@ from .views import (
     VietQRCreateView,
     BookingConfirmPaymentView, AdminBookingListView, AdminApproveBookingView,
     payment_status, ReviewCreateView, UserReviewListView, UserReviewDetailView,
-    ProviderTourView, ProviderTourDetailView, TourImageDeleteView
+    ProviderTourView, ProviderTourDetailView, TourImageDeleteView,ProviderRevenueView,ApproveTourView
 )
 
 urlpatterns = [
@@ -48,4 +48,6 @@ urlpatterns = [
     path('provider/customers/', ProviderCustomerListView.as_view(), name='provider-customers'),
     path('provider/tours/<int:tour_id>/update-status/', UpdateTourStatusView.as_view(), name='update-tour-status'),
     path('provider/revenue-report/', ProviderRevenueReportView.as_view(), name='provider-revenue-report'),
+    path('provider/analytics/revenue/', ProviderRevenueView.as_view(), name='provider-revenue'),
+    path('admin/tours/<int:tour_id>/approve/', ApproveTourView.as_view(), name='approve-tour'),
 ]

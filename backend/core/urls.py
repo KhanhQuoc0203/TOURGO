@@ -16,6 +16,5 @@ urlpatterns = [
     # Thêm trang chủ cho Backend để tránh lỗi 404
     path('', lambda request: __import__('django.http').http.HttpResponse("<h1>TOURGO Backend is Running!</h1><p>Please use <b>http://localhost:5173/</b> for the main website.</p>")),
 ]
-
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+   urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

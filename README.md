@@ -37,3 +37,7 @@ Trang review:
 - http://localhost:5173/my-reviews
 
 npm install recharts 
+
+#26 chay lai 2 lenh 
+python manage.py makemigrations
+python manage.py migrate

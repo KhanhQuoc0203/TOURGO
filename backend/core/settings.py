@@ -208,11 +208,15 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOGS_DIR, 'debug.log'),
             'formatter': 'verbose',
+            # 🌟 CHỐT CHẶN 1: Ép ghi file bằng mã UTF-8 để không bị crash tiếng Việt trên Windows
+            'encoding': 'utf-8', 
         },
         'console': {
-        'level': 'DEBUG',
-        'class': 'logging.StreamHandler',
-        'formatter': 'verbose',
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            # Lưu ý: Mặc định StreamHandler trên terminal Windows đôi khi cũng cần utf-8 ở một số phiên bản Python cũ,
+            # nhưng đặt encoding trực tiếp ở FileHandler phía trên là đã giải quyết được 99% lỗi crash của bạn rồi.
         },
     },
     'loggers': {
@@ -222,18 +226,19 @@ LOGGING = {
             'propagate': True,
         },
         'app_logger': {
-            'handlers': ['file'],
+            # 🌟 CHỐT CHẶN 2: Thêm 'console' để khi test ở Backend, Tân và Khánh 
+            # có thể nhìn thấy dòng log "đăng nhập thành công" hiện ngay trên terminal luôn.
+            'handlers': ['file', 'console'], 
             'level': 'INFO',
             'propagate': True,
         },
         'tours.email_service': {
-        'handlers': ['file', 'console'],  # Thêm 'console' để in ra terminal
-        'level': 'DEBUG',
-        'propagate': False,
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
     },
 }
-
 # --- Email Settings for Gmail ---
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = 'smtp.gmail.com'

@@ -23,7 +23,11 @@ class Tour(models.Model):
     longitude = models.FloatField(verbose_name="Kinh độ (Lng)", null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
-
+    status = models.CharField(
+        max_length=20, 
+        choices=[('pending', 'Chờ duyệt'), ('approved', 'Đã duyệt'), ('rejected', 'Từ chối')],
+        default='pending' # <--- Đây là chìa khóa: mọi tour mới tạo mặc định sẽ là 'pending'
+    )
     def __str__(self):
         return self.title
 

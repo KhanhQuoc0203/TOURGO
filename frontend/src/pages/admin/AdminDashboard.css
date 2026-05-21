@@ -1,0 +1,50 @@
+/* ── RESET & BASE ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  background: #05070a; /* Tối hơn, sâu hơn */
+  font-family: 'Inter', -apple-system, sans-serif; 
+  color: #e2e8f0; 
+}
+
+/* ── LAYOUT ───────────────────────────────────────────────────────────── */
+.admin-shell { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ──────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 240px; background: #0a0e17; /* Tối hơn sidebar cũ */
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex; flex-direction: column; padding: 28px 12px;
+}
+.sidebar-brand { 
+  display: flex; align-items: center; gap: 10px; padding: 0 12px 32px; 
+  font-weight: 700; font-size: 1.1rem; color: #fff; 
+}
+
+/* ── MAIN CONTENT ─────────────────────────────────────────────────────── */
+.main-content { flex: 1; overflow-y: auto; padding: 32px; background: #05070a; }
+
+/* ── STATS GRID & CARDS ───────────────────────────────────────────────── */
+.stat-card, .chart-card {
+  background: #0d1117; /* Nền card tối sâu */
+  border: 1px solid rgba(255, 255, 255, 0.05); 
+  border-radius: 16px; padding: 24px;
+}
+.stat-card-value { color: #ffffff; }
+
+/* ── BẢNG DANH SÁCH USER (TỐI ƯU HÓA) ─────────────────────────────────── */
+.user-table { width: 100%; border-collapse: collapse; }
+.user-table th {
+  padding: 16px; color: #64748b; font-size: 0.75rem; 
+  text-transform: uppercase; border-bottom: 1px solid #1a1f2e;
+}
+.user-table td {
+  padding: 16px; color: #cbd5e1; border-bottom: 1px solid #1a1f2e;
+}
+.user-table tr:hover { background: rgba(56, 189, 248, 0.03); }
+
+/* ── LOADING ──────────────────────────────────────────────────────────── */
+.loading-screen { 
+  background: #05070a; color: #38bdf8;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; 
+  height: 100vh;
+}

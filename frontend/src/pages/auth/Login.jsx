@@ -7,6 +7,7 @@ import travelImg from '../../assets/travel.png';
 export default function Login() {
   const navigate = useNavigate();
 
+  // GIỮ NGUYÊN: State quản lý dữ liệu Form cũ
   const [loginData, setLoginData] = useState({
     username: '',
     password: ''
@@ -14,30 +15,50 @@ export default function Login() {
 
   const [errorMsg, setErrorMsg] = useState('');
 
+  // GIỮ NGUYÊN: Hàm bắt sự kiện thay đổi input cũ
   const handleChange = (e) => {
     setLoginData({ ...loginData, [e.target.name]: e.target.value });
   };
 
+  // CẬP NHẬT: Hàm xử lý Đăng nhập tích hợp phân quyền động
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const response = await axiosClient.post('users/login/', loginData);
 
-      console.log(response.data);
-      // Lưu token và thông tin user mới
+      console.log("Dữ liệu đăng nhập thành công:", response.data);
+      
+      // 1. Giữ nguyên tính năng lưu dữ liệu vào localStorage của nhóm
       localStorage.setItem('access_token', response.data.access_token);
       localStorage.setItem('refresh_token', response.data.refresh_token);
       localStorage.setItem('username', response.data.username);
       localStorage.setItem('role', response.data.role);
 
+      // 2. Cập nhật ngay Token vào header axiosClient để tránh lỗi bất đồng bộ khi chuyển trang
+      if (axiosClient.defaults.headers.common) {
+        axiosClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+      }
+
       setErrorMsg('');
-      navigate('/');
+
+      // 3. Logic điều hướng động dựa trên role từ Backend trả về
+      const userRole = response.data.role?.toLowerCase(); 
+      
+      if (userRole === 'admin' || userRole === 'staff') {
+        console.log("Tài khoản quyền quản trị -> Chuyển hướng sang Admin Dashboard");
+        navigate('/admin/dashboard');
+      } else {
+        console.log("Tài khoản quyền khách hàng -> Chuyển hướng về Trang chủ");
+        navigate('/');
+      }
+
     } catch (error) {
       console.error("Lỗi đăng nhập:", error.response?.data);
       setErrorMsg("Sai tài khoản hoặc mật khẩu!");
     }
   };
 
+  // GIỮ NGUYÊN 100%: Toàn bộ cấu trúc giao diện HTML và thiết kế cũ
   return (
     <div className="login-container">
       {/* IMAGE */}

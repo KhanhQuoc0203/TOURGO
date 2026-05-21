@@ -10,9 +10,12 @@ from django.core.mail import send_mail
 import logging
 import random
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from django.db.models import Sum, Count
+from django.db.models.functions import ExtractMonth
+from datetime import date
 logger = logging.getLogger('app_logger')
-
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from tours.models import Tour, Booking
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
@@ -32,18 +35,22 @@ class LoginView(APIView):
         
         if user is not None:
             refresh = RefreshToken.for_user(user)
-            logger.info(f"Người dùng {username} đã đăng nhập thành công.")
+
+            user_role = "admin" if (user.is_superuser or user.is_staff) else user.role
+            
+            # Fix lỗi tiếng Việt ghi log không dấu trên Windows (Tránh lỗi charmap crash)
+            logger.info(f"Người dùng {username} đã đăng nhập thành công với tư cách: {user_role}")
+            
             return Response({
                 "message": "Đăng nhập thành công!",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh),
                 "username": user.username,
-                "role": user.role
+                "role": user_role  # Trả về giá trị đã qua xử lý phân quyền
             }, status=status.HTTP_200_OK)
             
-        logger.warning(f"Thử đăng nhập thất bại cho tài khoản: {username}")
+        logger.warning(f"Thu dang nhap that bai cho tai khoan: {username}")
         return Response({"error": "Sai tài khoản hoặc mật khẩu"}, status=status.HTTP_400_BAD_REQUEST)
-
 class ForgotPasswordView(APIView):
     """
     API yêu cầu gửi mã OTP qua Email để quên mật khẩu
@@ -186,3 +193,42 @@ class ChangePasswordView(APIView):
             user.save()
             return Response({"message": "Đổi mật khẩu thành công!"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class AdminUserListView(APIView):
+    # Cấu hình bảo mật: Bắt buộc đăng nhập VÀ phải là tài khoản Admin/Staff
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        # Lấy tất cả user trong Database
+        users = User.objects.all()
+        # Dùng chính UserSerializer bạn đã import ở đầu file để biến đổi dữ liệu thành JSON
+        serializer = UserSerializer(users, many=True) 
+        return Response(serializer.data, status=status.HTTP_200_OK)
+class AdminSystemStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        total_users = User.objects.count()
+        total_tours = Tour.objects.count()
+        
+        # Lấy tổng tiền từ các booking đã hoàn thành
+        total_revenue = Booking.objects.filter(status='completed') \
+                                       .aggregate(total=Sum('total_price'))['total'] or 0
+
+        return Response({
+            "success": True,
+            "data": {
+                "total_users": total_users,
+                "total_tours": total_tours,
+                "total_revenue": float(total_revenue)
+            }
+        }, status=status.HTTP_200_OK)
+class ToggleUserStatusView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, user_id):
+        user = User.objects.get(id=user_id)
+        # Nếu đang là Active thì chuyển Banned và ngược lại
+        new_status = 'banned' if user.status == 'active' else 'active'
+        user.status = new_status
+        user.save()
+        return Response({"success": True, "status": user.status})

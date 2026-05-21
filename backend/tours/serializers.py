@@ -24,6 +24,9 @@ class TourSerializer(serializers.ModelSerializer):
         model = Tour
         fields = '__all__'
         read_only_fields = ['creator']
+        extra_kwargs = {
+            'status': {'read_only': True}
+        }
 
 from rest_framework import serializers
 from .models import Booking

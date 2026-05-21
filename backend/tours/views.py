@@ -21,8 +21,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
-
+from django.db.models import Sum, Count
+from django.db.models.functions import ExtractMonth
+from rest_framework.permissions import IsAdminUser
 User = get_user_model()
 class ProviderTourView(generics.ListCreateAPIView):
     serializer_class = TourSerializer
@@ -37,7 +38,7 @@ class ProviderTourView(generics.ListCreateAPIView):
         ).order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(creator=self.request.user)
+        serializer.save(creator=self.request.user,status='pending')
 
 class ProviderTourDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TourSerializer
@@ -88,7 +89,7 @@ class TourCreateView(generics.ListCreateAPIView):
         return queryset
     def perform_create(self, serializer):
         # Tự động gán người tạo cho tour mới
-        serializer.save(creator=self.request.user)
+        serializer.save(creator=self.request.user, status='pending')
 
 # GIỮ NGUYÊN API LỌC NÂNG CAO CỦA KHANG
 class TourFilterView(APIView):
@@ -742,4 +743,94 @@ class ProviderRevenueReportView(APIView):
             "monthly": formatted_months,
             "quarterly": formatted_quarters
         })       
+class ProviderRevenueView(APIView):
+    """
+    API Báo cáo doanh thu theo Tháng/Quý dành riêng cho Provider (Tối ưu SQL hóa)
+    """
+    permission_classes = [IsAuthenticated] 
+
+    def get(self, request):
+        provider_id = request.user.id 
+        report_type = request.query_params.get('type', 'month')
+        year_param = request.query_params.get('year', date.today().year)
         
+        try:
+            year = int(year_param)
+        except ValueError:
+            return Response({"error": "Năm truyền vào không hợp lệ, phải là số nguyên."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Tạo câu Query cơ sở lọc đúng dữ liệu của Provider
+        bookings_query = Booking.objects.filter(
+            tour__creator_id=provider_id,
+            status='confirmed',
+            booking_date__year=year
+        )
+
+        result_data = []
+
+        # 2. XỬ LÝ THEO THÁNG (Khánh tối ưu SQL)
+        if report_type == 'month':
+            # SQL bóc tách tháng và SUM tổng tiền luôn dưới DB
+            monthly_data = bookings_query.annotate(
+                month=ExtractMonth('booking_date')
+            ).values('month').annotate(
+                revenue=Sum('total_price'),
+                bookings=Count('id')
+            ).order_by('month')
+
+            # Chuyển kết quả database thành dict để map dữ liệu nhanh
+            revenue_map = {item['month']: (item['revenue'], item['bookings']) for item in monthly_data}
+            
+            for month in range(1, 13):
+                rev, bks = revenue_map.get(month, (0.0, 0))
+                result_data.append({
+                    "label": f"Tháng {month:02d}",
+                    "total_revenue": float(rev or 0.0), 
+                    "total_bookings": bks
+                })
+
+        # 3. XỬ LÝ THEO QUÝ
+        elif report_type == 'quarter':
+            quarter_data = bookings_query.annotate(
+                month=ExtractMonth('booking_date')
+            ).values('month', 'total_price')
+
+            quarter_map = {1: {"rev": 0.0, "bks": 0}, 2: {"rev": 0.0, "bks": 0}, 3: {"rev": 0.0, "bks": 0}, 4: {"rev": 0.0, "bks": 0}}
+            
+            for item in quarter_data:
+                month = item['month']
+                if month:
+                    quarter = (month - 1) // 3 + 1
+                    quarter_map[quarter]["rev"] += float(item['total_price'] or 0.0)
+                    quarter_map[quarter]["bks"] += 1
+
+            for q in range(1, 5):
+                result_data.append({
+                    "label": f"Quý {q}",
+                    "total_revenue": quarter_map[q]["rev"],
+                    "total_bookings": quarter_map[q]["bks"]
+                })
+        else:
+            return Response({"error": "Tham số type phải là 'month' hoặc 'quarter'"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. Trả kết quả về cho Hà nhận data vẽ UI
+        return Response({
+            "year": year,
+            "report_type": report_type,
+            "data": result_data
+        }, status=status.HTTP_200_OK)
+class ApproveTourView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, tour_id):
+        tour = Tour.objects.get(id=tour_id)
+        action = request.data.get('action') # 'approve' hoặc 'reject'
+        
+        if action == 'approve':
+            tour.status = 'approved'
+        else:
+            tour.status = 'rejected'
+            tour.rejection_reason = request.data.get('reason', '')
+            
+        tour.save()
+        return Response({"success": True})

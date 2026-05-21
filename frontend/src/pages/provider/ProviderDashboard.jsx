@@ -20,9 +20,11 @@ export default function ProviderDashboard() {
   const [stats, setStats] = useState({ newOrders: 0, totalRevenue: 0 });
   const [upcomingGuests, setUpcomingGuests] = useState([]);
   
-  // --- STATE BIỂU ĐỒ DOANH THU DAY 24 ---
+  // --- STATE BIỂU ĐỒ DOANH THU & BỘ LỌC ĐỘNG ---
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
+  const [reportType, setReportType] = useState('month'); // Chức năng mới: Chọn Loại báo cáo
+  const [year, setYear] = useState(2026);                // Chức năng mới: Chọn Năm theo dõi
 
   // Form State
   const [formData, setFormData] = useState({
@@ -42,11 +44,15 @@ export default function ProviderDashboard() {
   const [filePreviews, setFilePreviews] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  // Tự động gọi lại dữ liệu khi danh sách Tour hoặc Bộ lọc biểu đồ thay đổi
   useEffect(() => {
     fetchTours();
     fetchDashboardStats();
-    fetchRevenueReport(); // Gọi API lấy báo cáo doanh thu thật từ Tân
   }, []);
+
+  useEffect(() => {
+    fetchRevenueReport(); 
+  }, [reportType, year]); // Bộ lọc thay đổi -> Tự động kích hoạt gọi API cập nhật biểu đồ
 
   // Dữ liệu giả lập hiển thị cho mục đơn hàng & khách hàng
   const fetchDashboardStats = () => {
@@ -57,33 +63,45 @@ export default function ProviderDashboard() {
     ]);
   };
 
-  // --- HÀM GỌI API BÁO CÁO DOANH THU (TÂN VIẾT) ---
+  // --- HÀM GỌI API BÁO CÁO DOANH THU THẬT ĐÃ ĐỒNG BỘ 100% VỚI BACKEND ---
   const fetchRevenueReport = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://127.0.0.1:8000/api/tours/provider/revenue-report/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Đọc chính xác khóa token (SimpleJWT) nhóm đang cấu hình lưu ở localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('access_token');
       
-      // 1. Đổ dữ liệu vào biểu đồ Cột (Hàng tháng)
-      setChartData(response.data.monthly);
+      // Gọi API động kèm params type và year gửi lên Backend lọc dữ liệu từ SQL
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/tours/provider/analytics/revenue/?type=${reportType}&year=${year}`, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       
-      // 2. Tính tổng doanh thu thực tế để cập nhật lên thẻ thông tin chung
-      const total = response.data.monthly.reduce((sum, item) => sum + item.revenue, 0);
-      setStats(prev => ({ ...prev, totalRevenue: total }));
+      const rawData = response.data.data || [];
 
-      // 3. Đổ dữ liệu vào biểu đồ Tròn (Theo Quý) kèm bảng màu định dạng
-      const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-      const formattedPie = response.data.quarterly.map((item, index) => ({
-        name: item.quarter,
-        value: item.revenue,
-        color: COLORS[index]
+      // 1. Tính tổng doanh thu thực tế từ mảng kết quả trả về để update Card Thống kê
+      const totalCalculated = rawData.reduce((sum, item) => sum + (item.total_revenue || 0), 0);
+      setStats(prev => ({ ...prev, totalRevenue: totalCalculated }));
+
+      // 2. Chuyển đổi dữ liệu đồng bộ cấu trúc với Biểu đồ cột của Hà
+      const formattedChart = rawData.map(item => ({
+        month: item.label,               // 'Tháng 05' hoặc 'Quý 1'
+        revenue: item.total_revenue,     // Số tiền thu được
+        bookings: item.total_bookings    // Số đơn hàng đặt thành công
+      }));
+      setChartData(formattedChart);
+
+      // 3. Đổ dữ liệu phân bổ tỉ trọng vào biểu đồ Tròn
+      const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7', '#ec4899', '#f97316', '#14b8a6', '#6366f1', '#8b5cf6', '#3b82f6', '#10b981'];
+      const formattedPie = rawData.map((item, index) => ({
+        name: item.label,
+        value: item.total_revenue,
+        color: COLORS[index % COLORS.length]
       }));
       setPieData(formattedPie);
 
     } catch (error) {
       console.error("Lỗi lấy báo cáo doanh thu thật, chuyển sang dùng dữ liệu Mock Test:", error);
-      // Dữ liệu mẫu hiển thị tạm thời nếu như Backend chưa kịp khởi động hoặc lỗi kết nối
+      
+      // Khôi phục dữ liệu mẫu dự phòng nguyên bản nếu Backend mất kết nối
       const mockMonthly = [
         { month: 'Tháng 1', revenue: 4500000 }, { month: 'Tháng 2', revenue: 3000000 },
         { month: 'Tháng 3', revenue: 8500000 }, { month: 'Tháng 4', revenue: 6000000 },
@@ -333,12 +351,33 @@ export default function ProviderDashboard() {
         </div>
       </div>
 
+      {/* --- CHỨC NĂNG MỚI: CỤM ĐIỀU KHIỂN BỘ LỌC ĐỘNG CHO BIỂU ĐỒ --- */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginBottom: '15px', paddingRight: '5px' }}>
+        <select 
+          style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: 'white', fontWeight: '500', outline: 'none', cursor: 'pointer' }}
+          value={reportType} 
+          onChange={(e) => setReportType(e.target.value)}
+        >
+          <option value="month">Xem theo Tháng</option>
+          <option value="quarter">Xem theo Quý</option>
+        </select>
+
+        <select 
+          style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: 'white', fontWeight: '500', outline: 'none', cursor: 'pointer' }}
+          value={year} 
+          onChange={(e) => setYear(parseInt(e.target.value))}
+        >
+          <option value={2026}>Năm 2026</option>
+          <option value={2025}>Năm 2025</option>
+        </select>
+      </div>
+
       {/* --- KHU VỰC HIỂN THỊ CÁC BIỂU ĐỒ DOANH THU DAY 24 CỦA HÀ --- */}
       <div style={{ display: 'flex', gap: '25px', marginBottom: '35px', flexWrap: 'wrap' }}>
         
-        {/* 1. Biểu đồ hình cột (Doanh thu tháng) */}
+        {/* 1. Biểu đồ hình cột (Doanh thu) */}
         <div style={{ flex: 2, minWidth: '600px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Biểu đồ phân tích doanh thu theo các tháng</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Biểu đồ phân tích doanh thu ({reportType === 'month' ? 'Từng Tháng' : 'Từng Quý'})</h3>
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
               <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
@@ -353,9 +392,9 @@ export default function ProviderDashboard() {
           </div>
         </div>
 
-        {/* 2. Biểu đồ hình tròn (Tỷ trọng theo quý) */}
+        {/* 2. Biểu đồ hình tròn (Tỷ trọng) */}
         <div style={{ flex: 1, minWidth: '300px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50', width: '100%', textAlign: 'left' }}>🍕 Tỷ trọng doanh thu Quý</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50', width: '100%', textAlign: 'left' }}>🍕 Tỷ trọng phân bổ thu nhập</h3>
           <div style={{ width: '100%', height: 220 }}>
             <ResponsiveContainer>
               <PieChart>
