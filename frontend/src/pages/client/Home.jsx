@@ -53,7 +53,7 @@ export default function Home() {
                   <img src={tour.image || 'https://via.placeholder.com/300x200'} alt={tour.name} />
                 </div>
                 <div className="tour-info">
-                  <h3>{tour.title}</h3>
+                  <h3>{tour.title}</h3>     
                   <p className="tour-price">
                     {new Intl.NumberFormat('vi-VN').format(tour.price)} VNĐ
                   </p>

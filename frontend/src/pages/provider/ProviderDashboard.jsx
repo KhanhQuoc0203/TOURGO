@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getProviderTours, createProviderTour, uploadTourImages, updateProviderTour, deleteProviderTour, deleteTourImage } from '../../api/tourApi';
+import axios from 'axios';
+// --- THƯ VIỆN BIỂU ĐỒ RECHARTS CHO DAY 24 ---
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './ProviderDashboard.css';
 
 export default function ProviderDashboard() {
@@ -12,6 +15,14 @@ export default function ProviderDashboard() {
   const [currentTourId, setCurrentTourId] = useState(null);
   const [showImageManager, setShowImageManager] = useState(false);
   const [selectedTour, setSelectedTour] = useState(null);
+
+  // --- STATE THỐNG KÊ CHI TIẾT ---
+  const [stats, setStats] = useState({ newOrders: 0, totalRevenue: 0 });
+  const [upcomingGuests, setUpcomingGuests] = useState([]);
+  
+  // --- STATE BIỂU ĐỒ DOANH THU DAY 24 ---
+  const [chartData, setChartData] = useState([]);
+  const [pieData, setPieData] = useState([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -33,7 +44,67 @@ export default function ProviderDashboard() {
 
   useEffect(() => {
     fetchTours();
+    fetchDashboardStats();
+    fetchRevenueReport(); // Gọi API lấy báo cáo doanh thu thật từ Tân
   }, []);
+
+  // Dữ liệu giả lập hiển thị cho mục đơn hàng & khách hàng
+  const fetchDashboardStats = () => {
+    setStats(prev => ({ ...prev, newOrders: 3 }));
+    setUpcomingGuests([
+      { id: 1, name: "Nguyễn Vũ Hà", tour: "Đi Nha Trang 3 Ngày", date: "25/05/2026" },
+      { id: 2, name: "Trần Đại Tân", tour: "Đà Lạt Mộng Mơ", date: "28/05/2026" }
+    ]);
+  };
+
+  // --- HÀM GỌI API BÁO CÁO DOANH THU (TÂN VIẾT) ---
+  const fetchRevenueReport = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://127.0.0.1:8000/api/tours/provider/revenue-report/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // 1. Đổ dữ liệu vào biểu đồ Cột (Hàng tháng)
+      setChartData(response.data.monthly);
+      
+      // 2. Tính tổng doanh thu thực tế để cập nhật lên thẻ thông tin chung
+      const total = response.data.monthly.reduce((sum, item) => sum + item.revenue, 0);
+      setStats(prev => ({ ...prev, totalRevenue: total }));
+
+      // 3. Đổ dữ liệu vào biểu đồ Tròn (Theo Quý) kèm bảng màu định dạng
+      const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+      const formattedPie = response.data.quarterly.map((item, index) => ({
+        name: item.quarter,
+        value: item.revenue,
+        color: COLORS[index]
+      }));
+      setPieData(formattedPie);
+
+    } catch (error) {
+      console.error("Lỗi lấy báo cáo doanh thu thật, chuyển sang dùng dữ liệu Mock Test:", error);
+      // Dữ liệu mẫu hiển thị tạm thời nếu như Backend chưa kịp khởi động hoặc lỗi kết nối
+      const mockMonthly = [
+        { month: 'Tháng 1', revenue: 4500000 }, { month: 'Tháng 2', revenue: 3000000 },
+        { month: 'Tháng 3', revenue: 8500000 }, { month: 'Tháng 4', revenue: 6000000 },
+        { month: 'Tháng 5', revenue: 15000000 }, { month: 'Tháng 6', revenue: 0 },
+        { month: 'Tháng 7', revenue: 0 }, { month: 'Tháng 8', revenue: 0 },
+        { month: 'Tháng 9', revenue: 0 }, { month: 'Tháng 10', revenue: 0 },
+        { month: 'Tháng 11', revenue: 0 }, { month: 'Tháng 12', revenue: 0 }
+      ];
+      setChartData(mockMonthly);
+
+      const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+      const mockQuarterly = [
+        { name: 'Quý 1', value: 16000000, color: COLORS[0] },
+        { name: 'Quý 2', value: 21000000, color: COLORS[1] },
+        { name: 'Quý 3', value: 0, color: COLORS[2] },
+        { name: 'Quý 4', value: 0, color: COLORS[3] }
+      ];
+      setPieData(mockQuarterly);
+      setStats(prev => ({ ...prev, totalRevenue: 37000000 }));
+    }
+  };
 
   const fetchTours = async () => {
     try {
@@ -85,9 +156,8 @@ export default function ProviderDashboard() {
           await uploadTourImages(currentTourId, selectedFiles);
         }
         
-        setMessage({ type: 'success', text: 'Cập nhật tour thành công.' });
+        setMessage({ type: 'success', text: 'Cập nhật thông tin tour du lịch thành công.' });
       } else {
-        // 1. Tạo tour mới thông qua API POST của Khánh
         const newTour = await createProviderTour({
           title: formData.title,
           address: formData.address,
@@ -102,32 +172,29 @@ export default function ProviderDashboard() {
 
         const newTourId = newTour.id;
 
-        // 2. Nếu có chọn thêm ảnh album, thực hiện upload lên backend (Khang)
         if (selectedFiles.length > 0) {
           await uploadTourImages(newTourId, selectedFiles);
         }
 
-        // Success
         setMessage({ type: 'success', text: 'Chúc mừng! Bạn đã đăng ký và tạo tour du lịch mới thành công.' });
       }
 
-      // Reset Form
       setFormData({
         title: '', address: '', price: '', departure_date: '', slots: '', latitude: '', longitude: '', description: '', image_url: ''
       });
       setSelectedFiles([]);
       setFilePreviews([]);
 
-      // Close Modal and Refresh
       setTimeout(() => {
         setShowCreateModal(false);
         fetchTours();
+        fetchRevenueReport(); // Tải lại biểu đồ sau khi thêm/sửa
         setMessage({ type: '', text: '' });
       }, 2000);
 
     } catch (error) {
-      console.error('Lỗi tạo tour mới:', error);
-      let errMsg = 'Đã có lỗi xảy ra trong quá trình tạo tour. Vui lòng kiểm tra lại!';
+      console.error('Lỗi lưu thông tin tour:', error);
+      let errMsg = 'Đã có lỗi xảy ra trong quá trình xử lý dữ liệu. Vui lòng kiểm tra lại!';
       if (error.response?.data) {
         if (typeof error.response.data === 'object') {
           errMsg = Object.entries(error.response.data)
@@ -163,13 +230,14 @@ export default function ProviderDashboard() {
   };
 
   const handleDeleteTour = async (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa tour này không? Mọi dữ liệu liên quan sẽ bị xóa.")) {
+    if (window.confirm("Bạn có chắc chắn muốn xóa tour này không? Mọi dữ liệu đặt chỗ liên quan cũng sẽ bị xóa bỏ hoàn toàn.")) {
       try {
         await deleteProviderTour(id);
         setMessage({ type: 'success', text: 'Đã xóa tour thành công.' });
         fetchTours();
+        fetchRevenueReport();
       } catch (error) {
-        setMessage({ type: 'error', text: 'Lỗi khi xóa tour.' });
+        setMessage({ type: 'error', text: 'Lỗi phát sinh trong hệ thống khi xóa tour.' });
       }
     }
   };
@@ -180,7 +248,7 @@ export default function ProviderDashboard() {
   };
 
   const handleDeleteImage = async (imageId) => {
-    if (window.confirm("Xóa ảnh này khỏi album?")) {
+    if (window.confirm("Xóa ảnh này khỏi album trưng bày?")) {
       try {
         await deleteTourImage(imageId);
         fetchTours();
@@ -189,7 +257,7 @@ export default function ProviderDashboard() {
           tour_images: prev.tour_images.filter(img => img.id !== imageId)
         }));
       } catch (error) {
-        alert("Lỗi khi xóa ảnh!");
+        alert("Hệ thống không thể xóa ảnh vào lúc này!");
       }
     }
   };
@@ -201,13 +269,12 @@ export default function ProviderDashboard() {
       await uploadTourImages(selectedTour.id, files);
       fetchTours();
       setShowImageManager(false);
-      setMessage({ type: 'success', text: 'Đã thêm ảnh thành công.' });
+      setMessage({ type: 'success', text: 'Đã bổ sung bộ sưu tập ảnh thành công.' });
     } catch (error) {
-      alert("Lỗi khi thêm ảnh");
+      alert("Lỗi tải tệp tin ảnh lên máy chủ");
     }
   };
 
-  // Helper to get first uploaded album image or main image_url, avoiding default beach placeholder
   const getTourDisplayImage = (tour) => {
     if (tour.tour_images && tour.tour_images.length > 0) {
       const imgPath = tour.tour_images[0].image;
@@ -225,7 +292,6 @@ export default function ProviderDashboard() {
     return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80';
   };
 
-  // Helper currency formatter
   const formatPrice = (value) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
   };
@@ -235,7 +301,7 @@ export default function ProviderDashboard() {
       <div className="dashboard-header-section">
         <div>
           <h1 className="dashboard-title">Kênh Nhà Cung Cấp</h1>
-          <p className="dashboard-subtitle">Quản lý và đăng tải các tour du lịch độc quyền của bạn</p>
+          <p className="dashboard-subtitle">Quản lý, theo dõi doanh thu và cấu hình các sản phẩm du lịch độc quyền</p>
         </div>
         <button className="btn-add-tour" onClick={() => {
           setEditMode(false);
@@ -251,24 +317,96 @@ export default function ProviderDashboard() {
         </button>
       </div>
 
-      {/* STATISTICS PANELS */}
+      {/* --- PHẦN THỐNG KÊ SỐ LIỆU ĐƠN HÀNG CHUNG --- */}
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-value">{tours.length}</div>
-          <div className="stat-label">Tổng số Tour đã đăng</div>
+        <div className="stat-card" style={{ background: '#e3f2fd', borderLeft: '5px solid #1e88e5' }}>
+          <div className="stat-value" style={{ color: '#1e88e5' }}>{stats.newOrders}</div>
+          <div className="stat-label" style={{ color: '#555' }}>🛒 Đơn hàng mới cần xử lý</div>
         </div>
-        <div className="stat-card accent">
-          <div className="stat-value">
-            {tours.reduce((total, tour) => total + (tour.slots || 0), 0)}
-          </div>
-          <div className="stat-label">Tổng số vé còn trống</div>
+        <div className="stat-card" style={{ background: '#e8f5e9', borderLeft: '5px solid #43a047' }}>
+          <div className="stat-value" style={{ color: '#43a047' }}>{formatPrice(stats.totalRevenue)}</div>
+          <div className="stat-label" style={{ color: '#555' }}>Doanh thu tích lũy hệ thống</div>
         </div>
         <div className="stat-card info">
-          <div className="stat-value">
-            {tours.filter(t => new Date(t.departure_date) > new Date()).length}
-          </div>
-          <div className="stat-label">Tour sắp khởi hành</div>
+          <div className="stat-value">{tours.length}</div>
+          <div className="stat-label">Tổng số lượng Tour vận hành</div>
         </div>
+      </div>
+
+      {/* --- KHU VỰC HIỂN THỊ CÁC BIỂU ĐỒ DOANH THU DAY 24 CỦA HÀ --- */}
+      <div style={{ display: 'flex', gap: '25px', marginBottom: '35px', flexWrap: 'wrap' }}>
+        
+        {/* 1. Biểu đồ hình cột (Doanh thu tháng) */}
+        <div style={{ flex: 2, minWidth: '600px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Biểu đồ phân tích doanh thu theo các tháng</h3>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => formatPrice(value)} />
+                <Legend />
+                <Bar dataKey="revenue" name="Doanh thu thực tế (VND)" fill="#43a047" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 2. Biểu đồ hình tròn (Tỷ trọng theo quý) */}
+        <div style={{ flex: 1, minWidth: '300px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50', width: '100%', textAlign: 'left' }}>🍕 Tỷ trọng doanh thu Quý</h3>
+          <div style={{ width: '100%', height: 220 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => formatPrice(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', fontSize: '12px', marginTop: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {pieData.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: item.color, borderRadius: '2px' }}></span>
+                <span>{item.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* --- PHẦN BẢNG KHÁCH HÀNG SẮP ĐI TOUR --- */}
+      <div className="dashboard-section-wrapper" style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '35px' }}>
+        <h2 className="section-title" style={{ marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          📅 Danh sách hành khách sắp khởi hành
+        </h2>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead>
+            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eceeef' }}>
+              <th style={{ padding: '12px', color: '#2c3e50', fontWeight: '600' }}>Tên khách hàng</th>
+              <th style={{ padding: '12px', color: '#2c3e50', fontWeight: '600' }}>Tour du lịch đã đặt</th>
+              <th style={{ padding: '12px', color: '#2c3e50', fontWeight: '600', textAlign: 'center' }}>Ngày khởi hành</th>
+            </tr>
+          </thead>
+          <tbody>
+            {upcomingGuests.map(guest => (
+              <tr key={guest.id} style={{ borderBottom: '1px solid #f1f1f1' }}>
+                <td style={{ padding: '12px', color: '#333', fontWeight: '500' }}>{guest.name}</td>
+                <td style={{ padding: '12px', color: '#555' }}>{guest.tour}</td>
+                <td style={{ padding: '12px', textAlign: 'center' }}>
+                  <span style={{ background: '#fff3e0', padding: '4px 10px', borderRadius: '20px', color: '#e65100', fontSize: '13px', fontWeight: '500' }}>
+                    {guest.date}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* ERROR/SUCCESS ALERTS */}
@@ -279,10 +417,10 @@ export default function ProviderDashboard() {
       )}
 
       {/* TOUR MANAGEMENT SECTION */}
-      <h2 className="section-title">Danh sách Tour của bạn</h2>
+      <h2 className="section-title">Hệ thống các Tour đang quản lý</h2>
 
       {loading ? (
-        <div className="loading-spinner">Đang tải danh sách các tour...</div>
+        <div className="loading-spinner">Đang đồng bộ danh sách dữ liệu từ máy chủ...</div>
       ) : tours.length === 0 ? (
         <div className="empty-state">
           <h3>Bạn chưa đăng tải tour nào</h3>
@@ -307,21 +445,20 @@ export default function ProviderDashboard() {
                   <div className="tour-card-details">
                     <p><strong>📍 Địa điểm:</strong> {tour.address}</p>
                     <p><strong>📅 Ngày đi:</strong> {tour.departure_date}</p>
-                    <p><strong>🎟️ Còn trống:</strong> {tour.slots} chỗ</p>
+                    <p><strong>🎟️ Còn trống:</strong> {tour.slots} chỗ đăng ký</p>
                     {tour.latitude && tour.longitude && (
-                      <p className="coordinates-tag">📌 Tọa độ: {tour.latitude}, {tour.longitude}</p>
+                      <p className="coordinates-tag">📌 Vĩ độ/Kinh độ: {tour.latitude}, {tour.longitude}</p>
                     )}
                   </div>
                   <div className="tour-card-footer">
                     <span className="status-badge active">Đang hoạt động</span>
                     {tour.tour_images && tour.tour_images.length > 0 && (
-                      <span className="images-count-badge">📸 {tour.tour_images.length} ảnh</span>
+                      <span className="images-count-badge">📸 {tour.tour_images.length} hình ảnh</span>
                     )}
                   </div>
                 </div>
               </Link>
               <div className="tour-card-body" style={{ paddingTop: '5px' }}>
-                {/* NEW ACTION BUTTONS */}
                 <div className="tour-card-actions" style={{ display: 'flex', gap: '8px', marginTop: '15px' }}>
                   <button onClick={() => openEditModal(tour)} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#f39c12', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>Sửa</button>
                   <button onClick={() => openImageManager(tour)} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#3498db', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>Ảnh</button>
@@ -338,7 +475,7 @@ export default function ProviderDashboard() {
         <div className="modal-backdrop">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>{editMode ? 'CHỈNH SỬA TOUR' : 'ĐĂNG TOUR DU LỊCH MỚI'}</h2>
+              <h2>{editMode ? 'CẬP NHẬT THÔNG TIN TOUR' : 'ĐĂNG KÝ PHÁT HÀNH TOUR MỚI'}</h2>
               <button className="btn-close-modal" onClick={() => {
                 setShowCreateModal(false);
                 setSelectedFiles([]);
@@ -349,7 +486,7 @@ export default function ProviderDashboard() {
             <form onSubmit={handleSubmit} className="create-tour-form">
               <div className="form-row-2">
                 <div className="form-group">
-                  <label htmlFor="title">Tên Tour: <span className="required">*</span></label>
+                  <label htmlFor="title">Tên sản phẩm hành trình: <span className="required">*</span></label>
                   <input
                     type="text"
                     id="title"
@@ -361,7 +498,7 @@ export default function ProviderDashboard() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="address">Địa điểm / Địa chỉ: <span className="required">*</span></label>
+                  <label htmlFor="address">Địa điểm / Chi nhánh: <span className="required">*</span></label>
                   <input
                     type="text"
                     id="address"
@@ -376,7 +513,7 @@ export default function ProviderDashboard() {
 
               <div className="form-row-3">
                 <div className="form-group">
-                  <label htmlFor="price">Giá Tour (VNĐ): <span className="required">*</span></label>
+                  <label htmlFor="price">Chi phí trọn gói (VNĐ): <span className="required">*</span></label>
                   <input
                     type="number"
                     id="price"
@@ -388,7 +525,7 @@ export default function ProviderDashboard() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="departure_date">Ngày khởi hành: <span className="required">*</span></label>
+                  <label htmlFor="departure_date">Lịch khởi hành: <span className="required">*</span></label>
                   <input
                     type="date"
                     id="departure_date"
@@ -399,7 +536,7 @@ export default function ProviderDashboard() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="slots">Số lượng chỗ (Vé): <span className="required">*</span></label>
+                  <label htmlFor="slots">Số lượng giới hạn (Vé): <span className="required">*</span></label>
                   <input
                     type="number"
                     id="slots"
@@ -414,7 +551,7 @@ export default function ProviderDashboard() {
 
               <div className="form-row-3">
                 <div className="form-group">
-                  <label htmlFor="image_url">Ảnh đại diện chính (Link URL):</label>
+                  <label htmlFor="image_url">Ảnh xem trước chính (Link URL):</label>
                   <input
                     type="url"
                     id="image_url"
@@ -425,7 +562,7 @@ export default function ProviderDashboard() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="latitude">Vĩ độ (Lat - Tùy chọn):</label>
+                  <label htmlFor="latitude">Vĩ độ (Vị trí bản đồ):</label>
                   <input
                     type="number"
                     step="any"
@@ -437,7 +574,7 @@ export default function ProviderDashboard() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="longitude">Kinh độ (Lng - Tùy chọn):</label>
+                  <label htmlFor="longitude">Kinh độ (Vị trí bản đồ):</label>
                   <input
                     type="number"
                     step="any"
@@ -451,7 +588,7 @@ export default function ProviderDashboard() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="description">Mô tả lịch trình & Dịch vụ đi kèm: <span className="required">*</span></label>
+                <label htmlFor="description">Thông tin chi tiết lịch trình công bố: <span className="required">*</span></label>
                 <textarea
                   id="description"
                   name="description"
@@ -463,9 +600,8 @@ export default function ProviderDashboard() {
                 />
               </div>
 
-              {/* ALBUM IMAGE UPLOADER */}
               <div className="form-group file-upload-section">
-                <label>Album ảnh bổ sung cho Tour:</label>
+                <label>Album lưu trữ bộ ảnh bổ sung:</label>
                 <div className="file-input-wrapper">
                   <input
                     type="file"
@@ -476,7 +612,7 @@ export default function ProviderDashboard() {
                     className="file-input-hidden"
                   />
                   <label htmlFor="album-images" className="btn-file-select">
-                    📸 Chọn ảnh từ thiết bị ({selectedFiles.length} đã chọn)
+                    📸 Tải ảnh lên từ bộ nhớ ({selectedFiles.length} tệp đã chọn)
                   </label>
                 </div>
                 {filePreviews.length > 0 && (
@@ -501,22 +637,23 @@ export default function ProviderDashboard() {
                     setFilePreviews([]);
                   }}
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button type="submit" className="btn-submit" disabled={submitting}>
-                  {submitting ? 'Đang gửi dữ liệu...' : (editMode ? 'Cập Nhật' : ' Phát Hành Tour Ngay')}
+                  {submitting ? 'Đang thực thi đồng bộ dữ liệu...' : (editMode ? 'Cập Nhật Ngay' : 'Phát Hành Tour')}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
       {/* IMAGE MANAGER MODAL */}
       {showImageManager && selectedTour && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
-              <h2>QUẢN LÝ ALBUM ẢNH</h2>
+              <h2>HỆ THỐNG QUẢN LÝ ALBUM ẢNH</h2>
               <button className="btn-close-modal" onClick={() => setShowImageManager(false)}>×</button>
             </div>
             
@@ -527,22 +664,22 @@ export default function ProviderDashboard() {
                     const imgUrl = (img.image.startsWith('http://') || img.image.startsWith('https://')) ? img.image : `http://127.0.0.1:8000${img.image}`;
                     return (
                       <div key={img.id} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                        <img src={imgUrl} alt="tour" style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }} />
+                        <img src={imgUrl} alt="tour item" style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }} />
                         <button 
                           onClick={() => handleDeleteImage(img.id)}
                           style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(231, 76, 60, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
-                          title="Xóa ảnh này"
+                          title="Xóa ảnh này ngay"
                         >×</button>
                       </div>
                     );
                   })
                 ) : (
-                  <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#7f8c8d' }}>Chưa có ảnh nào trong album.</p>
+                  <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#7f8c8d' }}>Chưa cập nhật hình ảnh nào vào album trưng bày.</p>
                 )}
               </div>
               
               <div className="add-more-images" style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>Thêm ảnh mới:</h4>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>Tải lên bổ sung tệp ảnh mới:</h4>
                 <input 
                   type="file" 
                   multiple 

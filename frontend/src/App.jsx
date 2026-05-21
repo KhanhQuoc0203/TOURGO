@@ -15,10 +15,8 @@ import PaymentSelection from './pages/client/Payment/PaymentSelection';
 import PaymentResult from './pages/client/Payment/PaymentResult';
 import Contact from './pages/client/Contact/Contact';
 import MyReviews from './pages/client/MyReviews';
-<<<<<<< HEAD
-=======
 import ProviderDashboard from './pages/provider/ProviderDashboard';
->>>>>>> origin/Day21
+import ProviderCustomers from './pages/provider/ProviderCustomers';
 
 function AppContent() {
   const location = useLocation();
@@ -45,10 +43,8 @@ function AppContent() {
         <Route path="/payment/:bookingId" element={<PaymentSelection />} />
         <Route path="/payment-result" element={<PaymentResult />} />
         <Route path="/my-reviews" element={<MyReviews />} />
-<<<<<<< HEAD
-=======
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
->>>>>>> origin/Day21
+        <Route path="/provider/customers" element={<ProviderCustomers />} />
       </Routes>
     </>
   );

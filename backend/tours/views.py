@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, filters, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, Sum
 from .models import Tour, TourImage, Booking, Transaction, Payment, Revenue
 from .serializers import BookingSerializer, TourSerializer, TourImageSerializer, BookingDetailSerializer, BookingListSerializer
 from .permissions import IsAdminOrProvider, IsProvider
@@ -14,14 +14,16 @@ from datetime import date
 logger = logging.getLogger('app_logger')
 from django.conf import settings
 from .email_service import send_ticket_email
-
-# Thêm vào imports hiện có của tours/views.py day 16
+from django.contrib.auth import get_user_model
+from django.db.models.functions import ExtractMonth
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
+
+User = get_user_model()
 class ProviderTourView(generics.ListCreateAPIView):
     serializer_class = TourSerializer
     permission_classes = [IsProvider]
@@ -627,3 +629,117 @@ class UserReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         # Bảo mật: Chỉ cho phép truy vấn và thao tác trên review do chính user này tạo
         return Review.objects.filter(user=self.request.user)
+
+
+
+class ProviderCustomerListView(APIView):
+    # Chỉ cho phép tài khoản đã đăng nhập và là Provider truy cập
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        provider = request.user
+        
+        # 1. Lấy tất cả các booking thành công của các tour thuộc về provider này
+        # Giả định model Tour có trường 'provider' và Model Booking có trường 'status'
+        bookings = Booking.objects.filter(
+            tour__provider=provider,
+            status='Paid' # Hoặc trạng thái đơn hàng thành công trong DB của nhóm
+        ).select_related('user', 'tour')
+
+        # 2. Gom dữ liệu khách hàng (tránh trùng lặp nếu 1 khách đặt nhiều tour)
+        customers_dict = {}
+        for b in bookings:
+            customer = b.user
+            if customer.id not in customers_dict:
+                customers_dict[customer.id] = {
+                    "id": customer.id,
+                    "customer_name": customer.get_full_name() or customer.username,
+                    "email": customer.email,
+                    "phone": getattr(customer, 'phone_number', 'N/A'), # Tùy thuộc vào model User của nhóm
+                    "booked_tours": []
+                }
+            
+            # Thêm thông tin tour mà khách này đã đặt
+            customers_dict[customer.id]["booked_tours"].append({
+                "booking_id": b.id,
+                "tour_title": b.tour.title,
+                "quantity": b.quantity,
+                "total_price": b.total_price
+            })
+
+        return Response(list(customers_dict.values()))
+    
+
+class UpdateTourStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, tour_id):
+        try:
+            # Chỉ cho phép sửa tour của chính mình
+            tour = Tour.objects.get(id=tour_id, provider=request.user)
+        except Tour.DoesNotExist:
+            return Response({"error": "Không tìm thấy tour hoặc bạn không có quyền"}, status=404)
+
+        # Lấy trạng thái mới từ frontend gửi lên (True/False)
+        is_active = request.data.get('is_active')
+        
+        if is_active is None:
+            return Response({"error": "Thiếu dữ liệu is_active"}, status=400)
+
+        tour.is_active = is_active
+        tour.save()
+
+        status_text = "Đang kinh doanh" if tour.is_active else "Tạm dừng"
+        return Response({
+            "message": f"Đã cập nhật trạng thái tour thành: {status_text}",
+            "tour_id": tour.id,
+            "is_active": tour.is_active
+        })
+        
+class ProviderRevenueReportView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        provider = request.user
+        current_year = datetime.datetime.now().year
+
+        # 1. Thống kê Doanh thu theo 12 Tháng trong năm hiện tại
+        # Sử dụng ExtractMonth để gom nhóm dữ liệu ngay trong Database
+        monthly_data = (
+            Booking.objects.filter(
+                tour__provider=provider,
+                status='Paid',
+                created_at__year=current_year  # Giả định dùng trường created_at làm mốc thời gian
+            )
+            .annotate(month=ExtractMonth('created_at'))
+            .values('month')
+            .annotate(total_revenue=Sum('total_price'))
+            .order_by('month')
+        )
+
+        # Tạo sẵn mảng dữ liệu 12 tháng mặc định bằng 0
+        monthly_report = {m: 0 for m in range(1, 13)}
+        for item in monthly_data:
+            monthly_report[item['month']] = item['total_revenue']
+
+        # Chuyển đổi định dạng thành mảng JSON mượt mà cho Frontend
+        formatted_months = [
+            {"month": f"Tháng {m}", "revenue": monthly_report[m]} for m in range(1, 13)
+        ]
+
+        # 2. Thống kê Doanh thu theo Quý (Q1, Q2, Q3, Q4)
+        quarterly_report = {f"Quý {q}": 0 for q in range(1, 5)}
+        for m in range(1, 13):
+            quarter = (m - 1) // 3 + 1
+            quarterly_report[f"Quý {quarter}"] += monthly_report[m]
+
+        formatted_quarters = [
+            {"quarter": q, "revenue": val} for q, val in quarterly_report.items()
+        ]
+
+        return Response({
+            "year": current_year,
+            "monthly": formatted_months,
+            "quarterly": formatted_quarters
+        })       
+        
