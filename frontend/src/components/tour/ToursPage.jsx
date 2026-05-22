@@ -9,7 +9,7 @@ const ToursPage = () => {
     const [search, setSearch] = useState('');
     const [startDate, setStartDate] = useState('');
     
-    // Giữ nguyên các state cũ để tránh lỗi tham chiếu nếu bạn có dùng ở đâu đó
+    const [currentUser, setCurrentUser] = useState(null);
     const [errors, setErrors] = useState({}); 
     const [numPeople, setNumPeople] = useState(1);
     const [bookingTourId, setBookingTourId] = useState(null); 
@@ -32,47 +32,38 @@ const ToursPage = () => {
         }
     };
 
-    useEffect(() => {
-        fetchTours();
-    }, []);
-
-    // Giữ lại hàm này nhưng thực tế nút bấm mới sẽ không gọi tới nó nữa
-    const handleBookingSubmit = async (tourId) => {
-        setErrors({}); 
+    const fetchCurrentUser = async () => {
         try {
-            const token = localStorage.getItem('access_token'); 
-            if (!token) {
-                alert("Vui lòng đăng nhập để đặt tour!");
-                return;
-            }
+            const token = localStorage.getItem('access_token');
+            if (!token) return;
 
-            const bookingData = {
-                tour: tourId,
-                number_of_people: parseInt(numPeople), 
-                booking_date: new Date().toISOString().split('T')[0]
-            };
-
-            const response = await axios.post('http://127.0.0.1:8000/api/tours/book/', bookingData, {
+            const response = await axios.get('http://127.0.0.1:8000/api/me/', {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            setCurrentUser(response.data); 
+        } catch (error) {
+            console.error("Không lấy được dữ liệu profile người dùng:", error);
+        }
+    };
 
-            alert("Đặt tour thành công!");
-            setBookingTourId(null);
-            setNumPeople(1); 
-            fetchTours(); 
-        } catch (err) {
-            if (err.response && err.response.data) {
-                setErrors(err.response.data);
-            } else {
-                alert("Đã xảy ra lỗi không xác định!");
-            }
+    useEffect(() => {
+        fetchTours();
+        fetchCurrentUser();
+    }, []);
+
+    const getStatusBadgeStyles = (status) => {
+        switch (status) {
+            case 'approved': return { text: 'Đã duyệt', color: '#2ecc71', bg: '#e8f8f5' };
+            case 'pending': return { text: 'Chờ duyệt', color: '#f39c12', bg: '#fef5e7' };
+            case 'rejected': return { text: 'Từ chối', color: '#e74c3c', bg: '#fdedec' };
+            default: return { text: status, color: '#7f8c8d', bg: '#f2f4f4' };
         }
     };
 
     const styles = {
-        wrapper: { backgroundColor: '#f0f2f5', minHeight: '100vh', padding: '30px 0' },
+        wrapper: { backgroundColor: '#f0f2f5', minHeight: '100vh', padding: '90px 0 30px 0' },
         container: { maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '25px', padding: '0 15px', alignItems: 'flex-start' },
-        sidebar: { width: '300px', backgroundColor: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', position: 'sticky', top: '20px' },
+        sidebar: { width: '300px', backgroundColor: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', position: 'sticky', top: '90px' },
         main: { flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
         label: { display: 'block', fontWeight: '600', marginBottom: '5px', fontSize: '13px', color: '#444' },
         input: { width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' },
@@ -80,9 +71,7 @@ const ToursPage = () => {
         card: { backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
         cardImg: { width: '100%', height: '180px', objectFit: 'cover' },
         cardBody: { padding: '15px' },
-        price: { color: '#d93025', fontSize: '1.25rem', fontWeight: 'bold' },
-        errorText: { color: '#d93025', fontSize: '12px', marginTop: '5px', fontWeight: '500' },
-        bookingBox: { marginTop: '15px', padding: '10px', borderTop: '1px solid #eee', backgroundColor: '#f8f9fa' }
+        price: { color: '#d93025', fontSize: '1.25rem', fontWeight: 'bold' }
     };
 
     return (
@@ -102,43 +91,31 @@ const ToursPage = () => {
                 </div>
 
                 <div style={styles.main}>
-                    {tours.length > 0 ? (
-                        tours.map((tour) => (
-                            <div key={tour.id} style={styles.card}>
-                                <img src={tour.image || "https://via.placeholder.com/300x180"} alt={tour.title} style={styles.cardImg} />
-                                <div style={styles.cardBody}>
-                                    <h4 style={{ margin: '0 0 8px 0', color: '#1a1f36' }}>{tour.title}</h4>
-                                    <p style={{ fontSize: '13px', color: '#666' }}>📍 {tour.address}</p>
-                                    <p style={{ fontSize: '13px', color: '#666', fontWeight: 'bold' }}>🎟️ Còn trống: {tour.slots} chỗ</p>
-                                    
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                    {tours
+                        .filter(tour => {
+                            const isStaffOrProvider = currentUser && (currentUser.is_staff || currentUser.role === 'PROVIDER' || currentUser.role === 'ADMIN');
+                            return isStaffOrProvider ? true : tour.status === 'approved';
+                        })
+                        .map((tour) => {
+                            const isOwner = currentUser && (String(currentUser.id) === String(tour.creator) || currentUser.is_staff || currentUser.role === 'ADMIN');
+                            const badge = getStatusBadgeStyles(tour.status);
+                            return (
+                                <div key={tour.id} style={styles.card}>
+                                    <img src={tour.image || "https://via.placeholder.com/300x180"} alt={tour.title} style={styles.cardImg} />
+                                    <div style={styles.cardBody}>
+                                        {isOwner && (
+                                            <div style={{ display: 'inline-block', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', color: badge.color, backgroundColor: badge.bg, marginBottom: '10px', border: `1px solid ${badge.color}` }}>
+                                                Status: {badge.text}
+                                            </div>
+                                        )}
+                                        <h4 style={{ margin: '0 0 8px 0', color: '#1a1f36' }}>{tour.title}</h4>
                                         <span style={styles.price}>{Number(tour.price).toLocaleString()}đ</span>
-                                        <button
-                                            onClick={() => navigate(`/tours/${tour.id}`)}
-                                            style={{ padding: '6px 12px', cursor: 'pointer', borderRadius: '5px', border: '1px solid #1a73e8', color: '#1a73e8', backgroundColor: 'transparent' }}
-                                        >
-                                            Chi tiết
-                                        </button>
+                                        <button onClick={() => navigate(`/tours/${tour.id}`)} style={{ ...styles.button, marginTop: '10px', backgroundColor: '#34a853' }}>Đặt Tour</button>
                                     </div>
-
-                                    {/* SỬA CHỖ NÀY: Nhấn vào là chuyển sang trang chi tiết luôn */}
-                                    <button 
-                                        onClick={() => navigate(`/tours/${tour.id}`)} 
-                                        style={{ ...styles.button, marginTop: '10px', backgroundColor: '#34a853' }}
-                                    >
-                                        Đặt Tour
-                                    </button>
-
-                                    {/* Giữ lại phần bookingTourId && (...) phía dưới nếu bạn vẫn muốn dùng để test, 
-                                        nhưng hiện tại nút trên đã điều hướng đi rồi nên phần này sẽ không hiện ra nữa. */}
                                 </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div style={{ gridColumn: '1/-1', textAlign: 'center', marginTop: '50px' }}>
-                            <p style={{ color: '#999' }}>Không có tour nào phù hợp!</p>
-                        </div>
-                    )}
+                            );
+                        })
+                    }
                 </div>
             </div>
         </div>

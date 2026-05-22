@@ -194,15 +194,42 @@ class ChangePasswordView(APIView):
             return Response({"message": "Đổi mật khẩu thành công!"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class AdminUserListView(APIView):
-    # Cấu hình bảo mật: Bắt buộc đăng nhập VÀ phải là tài khoản Admin/Staff
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAdminUser]
 
     def get(self, request):
-        # Lấy tất cả user trong Database
-        users = User.objects.all()
-        # Dùng chính UserSerializer bạn đã import ở đầu file để biến đổi dữ liệu thành JSON
-        serializer = UserSerializer(users, many=True) 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        users = User.objects.all().order_by('-id')
+        user_list = []
+        
+        for u in users:
+            # Xác định vai trò chuỗi chữ thường
+            role = 'user'
+            if u.is_superuser or u.is_staff:
+                role = 'admin'
+            elif hasattr(u, 'is_provider') and u.is_provider: # Hoặc logic kiểm tra provider của bạn
+                role = 'provider'
+                
+            # --- LOGIC THIẾT LẬP 3 TRẠNG THÁI THEO YÊU CẦU ---
+            if u.is_superuser or u.is_staff:
+                status = 'Active' # Admin mặc định luôn Active
+            elif getattr(u, 'is_approved', True) == False: 
+                # Nếu bạn có trường kiểm duyệt đăng ký (Ví dụ: is_approved = False), thì là Chờ duyệt
+                status = 'Pending'
+            elif u.is_active:
+                status = 'Active'
+            else:
+                status = 'Banned'
+
+            user_list.append({
+                'id': u.id,
+                'username': u.username,
+                'email': u.email,
+                'role': role,
+                'status': status,
+                'is_superuser': u.is_superuser,
+                'is_staff': u.is_staff
+            })
+            
+        return Response(user_list)
 class AdminSystemStatsView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
@@ -225,10 +252,22 @@ class AdminSystemStatsView(APIView):
 class ToggleUserStatusView(APIView):
     permission_classes = [IsAdminUser]
 
-    def patch(self, request, user_id):
-        user = User.objects.get(id=user_id)
-        # Nếu đang là Active thì chuyển Banned và ngược lại
-        new_status = 'banned' if user.status == 'active' else 'active'
-        user.status = new_status
-        user.save()
-        return Response({"success": True, "status": user.status})
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            
+            # Không cho phép tự khóa chính mình hoặc khóa các Admin khác
+            if user.is_superuser or user.is_staff:
+                return Response({'error': 'Không thể thay đổi trạng thái của tài khoản Quản trị!'}, status=400)
+            
+            # Logic xử lý xoay vòng trạng thái
+            if getattr(user, 'is_approved', True) == False:
+                user.is_approved = True
+                user.is_active = True
+            else:
+                user.is_active = not user.is_active
+                
+            user.save()
+            return Response({'message': 'Cập nhật trạng thái thành công'})
+        except User.DoesNotExist:
+            return Response({'error': 'Người dùng không tồn tại'}, status=404)

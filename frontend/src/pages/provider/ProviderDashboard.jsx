@@ -314,8 +314,11 @@ export default function ProviderDashboard() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
   };
 
+  // ... Toàn bộ logic imports, states, useEffects và các hàm xử lý API bên trên GIỮ NGUYÊN 100% ...
+
   return (
     <div className="provider-dashboard-container">
+      {/* --- CÁC PHẦN HEADER, STATS GRID, BIỂU ĐỒ RECHARTS VÀ BẢNG HÀNH KHÁCH GIỮ NGUYÊN --- */}
       <div className="dashboard-header-section">
         <div>
           <h1 className="dashboard-title">Kênh Nhà Cung Cấp</h1>
@@ -335,7 +338,6 @@ export default function ProviderDashboard() {
         </button>
       </div>
 
-      {/* --- PHẦN THỐNG KÊ SỐ LIỆU ĐƠN HÀNG CHUNG --- */}
       <div className="stats-grid">
         <div className="stat-card" style={{ background: '#e3f2fd', borderLeft: '5px solid #1e88e5' }}>
           <div className="stat-value" style={{ color: '#1e88e5' }}>{stats.newOrders}</div>
@@ -351,7 +353,6 @@ export default function ProviderDashboard() {
         </div>
       </div>
 
-      {/* --- CHỨC NĂNG MỚI: CỤM ĐIỀU KHIỂN BỘ LỌC ĐỘNG CHO BIỂU ĐỒ --- */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginBottom: '15px', paddingRight: '5px' }}>
         <select 
           style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: 'white', fontWeight: '500', outline: 'none', cursor: 'pointer' }}
@@ -361,7 +362,6 @@ export default function ProviderDashboard() {
           <option value="month">Xem theo Tháng</option>
           <option value="quarter">Xem theo Quý</option>
         </select>
-
         <select 
           style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: 'white', fontWeight: '500', outline: 'none', cursor: 'pointer' }}
           value={year} 
@@ -372,10 +372,7 @@ export default function ProviderDashboard() {
         </select>
       </div>
 
-      {/* --- KHU VỰC HIỂN THỊ CÁC BIỂU ĐỒ DOANH THU DAY 24 CỦA HÀ --- */}
       <div style={{ display: 'flex', gap: '25px', marginBottom: '35px', flexWrap: 'wrap' }}>
-        
-        {/* 1. Biểu đồ hình cột (Doanh thu) */}
         <div style={{ flex: 2, minWidth: '600px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Biểu đồ phân tích doanh thu ({reportType === 'month' ? 'Từng Tháng' : 'Từng Quý'})</h3>
           <div style={{ width: '100%', height: 300 }}>
@@ -392,7 +389,6 @@ export default function ProviderDashboard() {
           </div>
         </div>
 
-        {/* 2. Biểu đồ hình tròn (Tỷ trọng) */}
         <div style={{ flex: 1, minWidth: '300px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50', width: '100%', textAlign: 'left' }}>🍕 Tỷ trọng phân bổ thu nhập</h3>
           <div style={{ width: '100%', height: 220 }}>
@@ -416,10 +412,8 @@ export default function ProviderDashboard() {
             ))}
           </div>
         </div>
-
       </div>
 
-      {/* --- PHẦN BẢNG KHÁCH HÀNG SẮP ĐI TOUR --- */}
       <div className="dashboard-section-wrapper" style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '35px' }}>
         <h2 className="section-title" style={{ marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           📅 Danh sách hành khách sắp khởi hành
@@ -448,14 +442,13 @@ export default function ProviderDashboard() {
         </table>
       </div>
 
-      {/* ERROR/SUCCESS ALERTS */}
       {message.text && (
         <div className={`alert-box ${message.type === 'success' ? 'success' : 'error'}`}>
           {message.text}
         </div>
       )}
 
-      {/* TOUR MANAGEMENT SECTION */}
+      {/* --- ĐOẠN ĐƯỢC FIX LẠI HIỂN THỊ TRẠNG THÁI ĐỘNG CHO PROVIDER --- */}
       <h2 className="section-title">Hệ thống các Tour đang quản lý</h2>
 
       {loading ? (
@@ -490,7 +483,23 @@ export default function ProviderDashboard() {
                     )}
                   </div>
                   <div className="tour-card-footer">
-                    <span className="status-badge active">Đang hoạt động</span>
+                    {/* LOGIC CHECK TRẠNG THÁI ĐỘNG 3 MỨC QUY ĐỊNH */}
+                    {tour.status === 'approved' && (
+                      <span className="status-badge state-approved" style={{ backgroundColor: '#2ecc71', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+                        Đang hoạt động
+                      </span>
+                    )}
+                    {tour.status === 'rejected' && (
+                      <span className="status-badge state-rejected" style={{ backgroundColor: '#e74c3c', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+                        Bị từ chối
+                      </span>
+                    )}
+                    {(tour.status === 'pending' || !tour.status) && (
+                      <span className="status-badge state-pending" style={{ backgroundColor: '#f1c40f', color: '#333', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+                        Chờ duyệt
+                      </span>
+                    )}
+
                     {tour.tour_images && tour.tour_images.length > 0 && (
                       <span className="images-count-badge">📸 {tour.tour_images.length} hình ảnh</span>
                     )}
@@ -509,7 +518,7 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* CREATE NEW TOUR MODAL */}
+      {/* --- TOÀN BỘ CÁC MODAL CREATE VÀ IMAGE MANAGER BÊN DƯỚI GIỮ NGUYÊN --- */}
       {showCreateModal && (
         <div className="modal-backdrop">
           <div className="modal-content">
@@ -526,133 +535,54 @@ export default function ProviderDashboard() {
               <div className="form-row-2">
                 <div className="form-group">
                   <label htmlFor="title">Tên sản phẩm hành trình: <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    placeholder="Ví dụ: Tour Đảo Phú Quốc 3 Ngày 2 Đêm"
-                    required
-                  />
+                  <input type="text" id="title" name="title" value={formData.title} onChange={handleInputChange} placeholder="Ví dụ: Tour Đảo Phú Quốc 3 Ngày 2 Đêm" required />
                 </div>
                 <div className="form-group">
                   <label htmlFor="address">Địa điểm / Chi nhánh: <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="Ví dụ: Phú Quốc, Kiên Giang"
-                    required
-                  />
+                  <input type="text" id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Ví dụ: Phú Quốc, Kiên Giang" required />
                 </div>
               </div>
 
               <div className="form-row-3">
                 <div className="form-group">
                   <label htmlFor="price">Chi phí trọn gói (VNĐ): <span className="required">*</span></label>
-                  <input
-                    type="number"
-                    id="price"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    placeholder="Ví dụ: 3500000"
-                    required
-                  />
+                  <input type="number" id="price" name="price" value={formData.price} onChange={handleInputChange} placeholder="Ví dụ: 3500000" required />
                 </div>
                 <div className="form-group">
                   <label htmlFor="departure_date">Lịch khởi hành: <span className="required">*</span></label>
-                  <input
-                    type="date"
-                    id="departure_date"
-                    name="departure_date"
-                    value={formData.departure_date}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <input type="date" id="departure_date" name="departure_date" value={formData.departure_date} onChange={handleInputChange} required />
                 </div>
                 <div className="form-group">
                   <label htmlFor="slots">Số lượng giới hạn (Vé): <span className="required">*</span></label>
-                  <input
-                    type="number"
-                    id="slots"
-                    name="slots"
-                    value={formData.slots}
-                    onChange={handleInputChange}
-                    placeholder="Ví dụ: 30"
-                    required
-                  />
+                  <input type="number" id="slots" name="slots" value={formData.slots} onChange={handleInputChange} placeholder="Ví dụ: 30" required />
                 </div>
               </div>
 
               <div className="form-row-3">
                 <div className="form-group">
                   <label htmlFor="image_url">Ảnh xem trước chính (Link URL):</label>
-                  <input
-                    type="url"
-                    id="image_url"
-                    name="image_url"
-                    value={formData.image_url}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/image.jpg"
-                  />
+                  <input type="url" id="image_url" name="image_url" value={formData.image_url} onChange={handleInputChange} placeholder="https://example.com/image.jpg" />
                 </div>
                 <div className="form-group">
                   <label htmlFor="latitude">Vĩ độ (Vị trí bản đồ):</label>
-                  <input
-                    type="number"
-                    step="any"
-                    id="latitude"
-                    name="latitude"
-                    value={formData.latitude}
-                    onChange={handleInputChange}
-                    placeholder="Ví dụ: 10.2899"
-                  />
+                  <input type="number" step="any" id="latitude" name="latitude" value={formData.latitude} onChange={handleInputChange} placeholder="Ví dụ: 10.2899" />
                 </div>
                 <div className="form-group">
                   <label htmlFor="longitude">Kinh độ (Vị trí bản đồ):</label>
-                  <input
-                    type="number"
-                    step="any"
-                    id="longitude"
-                    name="longitude"
-                    value={formData.longitude}
-                    onChange={handleInputChange}
-                    placeholder="Ví dụ: 103.9840"
-                  />
+                  <input type="number" step="any" id="longitude" name="longitude" value={formData.longitude} onChange={handleInputChange} placeholder="Ví dụ: 103.9840" />
                 </div>
               </div>
 
               <div className="form-group">
                 <label htmlFor="description">Thông tin chi tiết lịch trình công bố: <span className="required">*</span></label>
-                <textarea
-                  id="description"
-                  name="description"
-                  rows="4"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Mô tả chi tiết các ngày đi, điểm tham quan, các khách sạn lưu trú, ăn uống..."
-                  required
-                />
+                <textarea id="description" name="description" rows="4" value={formData.description} onChange={handleInputChange} placeholder="Mô tả chi tiết các ngày đi, điểm tham quan, các khách sạn lưu trú, ăn uống..." required />
               </div>
 
               <div className="form-group file-upload-section">
                 <label>Album lưu trữ bộ ảnh bổ sung:</label>
                 <div className="file-input-wrapper">
-                  <input
-                    type="file"
-                    id="album-images"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="file-input-hidden"
-                  />
-                  <label htmlFor="album-images" className="btn-file-select">
-                    📸 Tải ảnh lên từ bộ nhớ ({selectedFiles.length} tệp đã chọn)
-                  </label>
+                  <input type="file" id="album-images" multiple accept="image/*" onChange={handleFileChange} className="file-input-hidden" />
+                  <label htmlFor="album-images" className="btn-file-select">📸 Tải ảnh lên từ bộ nhớ ({selectedFiles.length} tệp đã chọn)</label>
                 </div>
                 {filePreviews.length > 0 && (
                   <div className="file-previews-container">
@@ -666,18 +596,7 @@ export default function ProviderDashboard() {
               </div>
 
               <div className="form-actions">
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  disabled={submitting}
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setSelectedFiles([]);
-                    setFilePreviews([]);
-                  }}
-                >
-                  Hủy bỏ
-                </button>
+                <button type="button" className="btn-cancel" disabled={submitting} onClick={() => { setShowCreateModal(false); setSelectedFiles([]); setFilePreviews([]); }}>Hủy bỏ</button>
                 <button type="submit" className="btn-submit" disabled={submitting}>
                   {submitting ? 'Đang thực thi đồng bộ dữ liệu...' : (editMode ? 'Cập Nhật Ngay' : 'Phát Hành Tour')}
                 </button>
@@ -687,7 +606,6 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* IMAGE MANAGER MODAL */}
       {showImageManager && selectedTour && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '600px' }}>
@@ -695,7 +613,6 @@ export default function ProviderDashboard() {
               <h2>HỆ THỐNG QUẢN LÝ ALBUM ẢNH</h2>
               <button className="btn-close-modal" onClick={() => setShowImageManager(false)}>×</button>
             </div>
-            
             <div className="image-manager-body" style={{ padding: '20px' }}>
               <div className="current-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 {selectedTour.tour_images && selectedTour.tour_images.length > 0 ? (
@@ -704,11 +621,7 @@ export default function ProviderDashboard() {
                     return (
                       <div key={img.id} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                         <img src={imgUrl} alt="tour item" style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }} />
-                        <button 
-                          onClick={() => handleDeleteImage(img.id)}
-                          style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(231, 76, 60, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
-                          title="Xóa ảnh này ngay"
-                        >×</button>
+                        <button onClick={() => handleDeleteImage(img.id)} style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(231, 76, 60, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }} title="Xóa ảnh này ngay">×</button>
                       </div>
                     );
                   })
@@ -716,16 +629,9 @@ export default function ProviderDashboard() {
                   <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#7f8c8d' }}>Chưa cập nhật hình ảnh nào vào album trưng bày.</p>
                 )}
               </div>
-              
               <div className="add-more-images" style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
                 <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>Tải lên bổ sung tệp ảnh mới:</h4>
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="image/*" 
-                  onChange={handleAddMoreImages}
-                  style={{ display: 'block', width: '100%', padding: '10px', border: '2px dashed #bdc3c7', borderRadius: '8px', cursor: 'pointer' }} 
-                />
+                <input type="file" multiple accept="image/*" onChange={handleAddMoreImages} style={{ display: 'block', width: '100%', padding: '10px', border: '2px dashed #bdc3c7', borderRadius: '8px', cursor: 'pointer' }} />
               </div>
             </div>
           </div>

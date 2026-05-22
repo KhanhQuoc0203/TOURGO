@@ -12,8 +12,6 @@ export default function Home() {
     const fetchTours = async () => {
       try {
         const data = await getTours();
-        console.log("DATA:", data);
-
         setTours(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error(error);
@@ -22,15 +20,28 @@ export default function Home() {
         setLoading(false);
       }
     };
-
     fetchTours();
   }, []);
 
-  // ... (giữ nguyên phần useEffect và useState bên trên)
+  // --- LOGIC GỘP TOUR NỔI BẬT ---
+  const approvedTours = tours.filter(tour => tour.status === 'approved');
+
+  // Lấy Top 2 tour giá cao nhất
+  const topPrice = [...approvedTours]
+    .sort((a, b) => Number(b.price) - Number(a.price))
+    .slice(0, 2);
+
+  // Lấy Top 2 tour có người đăng ký nhiều nhất (slots ít nhất)
+  const topHot = [...approvedTours]
+    .sort((a, b) => Number(a.slots) - Number(b.slots))
+    .slice(0, 2);
+
+  // Gộp lại, lọc trùng ID, và lấy đúng 3 cái
+  const featuredTours = Array.from(new Map([...topPrice, ...topHot].map(item => [item.id, item])).values())
+    .slice(0, 3);
 
   return (
     <div className="home-container">
-      {/* Giữ nguyên phần Header/Hero của bạn */}
       <header className="hero-section" style={{ backgroundImage: `url(${BackGroundImage})` }}>
         <div className="hero-overlay"></div>
         <div className="hero-content">
@@ -38,34 +49,38 @@ export default function Home() {
         </div>
       </header>
 
+      {/* PHẦN DUY NHẤT: DANH SÁCH TOUR HẤP DẪN */}
       <div className="tour-list-container">
         <h2 className="section-title">Danh sách tour hấp dẫn</h2>
-
+        
         {loading ? (
           <p>Đang tải dữ liệu...</p>
         ) : (
           <div className="tour-grid">
-           {tours.map((tour) => (
-          /* 2. Bao bọc Card bằng Link, truyền ID vào đường dẫn */
-            <Link to={`/tours/${tour.id}`} key={tour.id} className="tour-card-link">
-              <div className="tour-card">
-                <div className="tour-image">
-                  <img src={tour.image || 'https://via.placeholder.com/300x200'} alt={tour.name} />
+            {featuredTours.map((tour) => (
+              <Link to={`/tours/${tour.id}`} key={tour.id} className="tour-card-link">
+                <div className="tour-card" style={{ border: '2px solid #3498db' }}>
+                  {/* Badge hiển thị nếu là tour hot */}
+                  <div className="tour-image" style={{ position: 'relative' }}>
+                    <img src={tour.image || 'https://via.placeholder.com/300x200'} alt={tour.title} />
+                    <span style={{ position: 'absolute', top: '10px', left: '10px', background: '#3498db', color: '#fff', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                      NỔI BẬT
+                    </span>
+                  </div>
+                  <div className="tour-info">
+                    <h3>{tour.title}</h3>
+                    <p className="tour-price">
+                      {new Intl.NumberFormat('vi-VN').format(tour.price)} VNĐ
+                    </p>
+                    <p style={{ fontSize: '12px', color: '#666' }}>🎟️ Còn {tour.slots} chỗ</p>
+                    <button className="btn-detail">Xem chi tiết</button>
+                  </div>
                 </div>
-                <div className="tour-info">
-                  <h3>{tour.title}</h3>     
-                  <p className="tour-price">
-                    {new Intl.NumberFormat('vi-VN').format(tour.price)} VNĐ
-                  </p>
-                  <button className="btn-detail">Xem chi tiết</button>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
         )}
       </div>
     </div>
   );
-
 }

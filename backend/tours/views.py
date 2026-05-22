@@ -45,7 +45,8 @@ class ProviderTourDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsProvider]
 
     def get_queryset(self):
-        return Tour.objects.filter(creator=self.request.user)
+        # Provider xem được tất cả tour của mình (kể cả pending, rejected để họ còn sửa hoặc xem lý do)
+        return Tour.objects.filter(creator=self.request.user).order_by('-id')
 
 # CHỈ DÙNG MỘT CLASS NÀY CHO CẢ XEM DANH SÁCH VÀ TẠO TOUR
 class TourCreateView(generics.ListCreateAPIView):
@@ -823,14 +824,39 @@ class ApproveTourView(APIView):
     permission_classes = [IsAdminUser]
 
     def post(self, request, tour_id):
-        tour = Tour.objects.get(id=tour_id)
-        action = request.data.get('action') # 'approve' hoặc 'reject'
-        
-        if action == 'approve':
-            tour.status = 'approved'
-        else:
-            tour.status = 'rejected'
-            tour.rejection_reason = request.data.get('reason', '')
+        try:
+            tour = Tour.objects.get(id=tour_id)
+            action = request.data.get('action') # Nhận các giá trị 'approve', 'reject', hoặc 'pending' từ React
             
-        tour.save()
-        return Response({"success": True})
+            if action == 'approve':
+                tour.status = 'approved'
+            elif action == 'reject':
+                tour.status = 'rejected'
+            elif action == 'pending':
+                tour.status = 'pending'
+            else:
+                return Response({"error": "Hành động không hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
+                
+            tour.save()
+            return Response({"message": f"Đã cập nhật trạng thái tour sang {tour.status}"}, status=status.HTTP_200_OK)
+        except Tour.DoesNotExist:
+            return Response({"error": "Không tìm thấy tour này"}, status=status.HTTP_404_NOT_FOUND)
+class AdminTourListView(APIView):
+    # Chỉ tài khoản có quyền Admin (is_staff=True) mới được phép gọi API này
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        try:
+            # Lấy toàn bộ tour, sắp xếp theo thời gian tạo mới nhất lên đầu
+            tours = Tour.objects.all().order_by('-created_at')
+            serializer = TourSerializer(tours, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class TourDetailView(generics.RetrieveAPIView): 
+    serializer_class = TourSerializer
+    permission_classes = [] # Khách vãng lai cũng xem được
+
+    def get_queryset(self):
+        # FIX TẠI ĐÂY: Khách hàng chỉ được xem những tour ĐÃ DUYỆT
+        return Tour.objects.filter(status='approved')
