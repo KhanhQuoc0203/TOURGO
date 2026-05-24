@@ -5,17 +5,27 @@
 cd
 
 # 2. Kích hoạt môi trường ảo
-
+python -m venv venv
 .\venv\Scripts\activate
+
+# cài thư việnviện
+pip install -r requirements.txt
+pip install flask
 
 # 3. Khởi động server
 
 python manage.py runserver
 
 # chạy frontend
+npm install
 
 npm run dev
+#chạy bằng điện thoại
 
+npm run dev -- --host
+  
+aa
+  
 # 4. Tạo file ghi nhận sự thay đổi:
 
 python manage.py makemigrations
