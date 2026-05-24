@@ -1,8 +1,21 @@
+# Luồng chạy file script 
+--
+cd backend
+
+double click setup_backend.bat
+
+double click run_backend.bat
+--
+cd frontend
+
+double click setup_frontend.bat
+
+
 # Chạy backend
 
 # 1. Di chuyển vào thư mục backend
 
-cd
+cd backend
 
 # 2. Kích hoạt môi trường ảo
 
