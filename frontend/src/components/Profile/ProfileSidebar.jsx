@@ -21,17 +21,15 @@ export default function ProfileSidebar({ activeTab, onChangeTab, user }) {
         >
           Thông tin
         </button>
+        
+        {/* Chỉ CUSTOMER mới thấy 2 mục này */}
+        {user?.role === 'CUSTOMER' && (
+        <>
         <button
           className={activeTab === 'history' ? 'active' : ''}
           onClick={() => onChangeTab('history')}
         >
           Lịch sử đặt tour
-        </button>
-        <button
-          className={activeTab === 'password' ? 'active' : ''}
-          onClick={() => onChangeTab('password')}
-        >
-          Đổi mật khẩu
         </button>
 
         <button
@@ -40,6 +38,17 @@ export default function ProfileSidebar({ activeTab, onChangeTab, user }) {
         >
           Đánh giá của tôi
         </button>
+        </>
+        )}
+
+        <button
+          className={activeTab === 'password' ? 'active' : ''}
+          onClick={() => onChangeTab('password')}
+        >
+          Đổi mật khẩu
+        </button>
+
+        
       </div>
     </aside>
   );

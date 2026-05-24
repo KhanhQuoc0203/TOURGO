@@ -114,14 +114,46 @@ function ReviewItemWithMenu({ rev, currentUser, onDeleted, onUpdated }) {
   const isOwnerOfReview = currentUser && currentUser.id === rev.user;
 
   const handleDelete = async () => {
-    if (!window.confirm('Bạn có chắc muốn xóa đánh giá này?')) return;
+  const result = await Swal.fire({
+    title: 'Xóa đánh giá?',
+    text: 'Bạn sẽ không thể khôi phục đánh giá này.',
+    icon: 'warning',
+    showCancelButton: true,
+
+    confirmButtonText: 'Xóa đánh giá',
+    cancelButtonText: 'Hủy',
+
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+
+    width: '420px',
+
+    reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
-      await axiosClient.delete(`tours/reviews/me/${rev.id}/`);
-      onDeleted(rev.id);
+        await axiosClient.delete(`tours/reviews/me/${rev.id}/`);
+
+        onDeleted(rev.id);
+
+        Swal.fire({
+        icon: 'success',
+        title: 'Đã xóa',
+        text: 'Đánh giá đã được xóa thành công.',
+        timer: 1500,
+        showConfirmButton: false,
+        });
+
     } catch {
-      Swal.fire('Lỗi', 'Xóa thất bại. Vui lòng thử lại.', 'error');
+        Swal.fire(
+        'Lỗi',
+        'Xóa thất bại. Vui lòng thử lại.',
+        'error'
+        );
     }
-  };
+    };
 
   const handleSave = async () => {
     if (!content.trim()) {
@@ -222,7 +254,7 @@ function ReviewItemWithMenu({ rev, currentUser, onDeleted, onUpdated }) {
                 color: 'white', border: 'none', borderRadius: '8px',
                 fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1,
               }}
-            >{saving ? 'Đang lưu...' : '💾 Lưu thay đổi'}</button>
+            >{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
 
             <button
               onClick={() => { setContent(rev.content); setRating(rev.rating); setEditing(false); }}
