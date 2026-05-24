@@ -2,13 +2,13 @@
 --
 cd backend
 
-double click setup_backend.bat
+.\setup_backend.bat
 
-double click run_backend.bat
+.\run_backend.bat
 --
 cd frontend
 
-double click setup_frontend.bat
+.\setup_frontend.bat
 
 
 # Chạy backend
